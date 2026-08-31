@@ -199,11 +199,19 @@ var KairoxEngine = (function(){
   var BROWSING_RE = /(je\s?regarde\s?juste|juste\s?regarder|juste\s?curieux|je\s?me\s?renseigne|comparer\s?les\s?prix|pas\s?encore\s?pret|pas\s?presse|pour\s?le\s?moment|sans\s?engagement|je\s?ne\s?suis\s?pas\s?(encore\s?)?(sur|s[uû]r)|on\s?verra)/i;
   var DISPO_RE = /(toujours\s?disponible|encore\s?disponible|reste.?t.?il|est.?ce\s?(qu.)?(elle|il|ce\s?bien)\s?est\s?(encore\s?|toujours\s?)?disponible|disponible\s?\?|dispo\s?\?|c.?est\s?vendu\s?\?|deja\s?vendu)/i;
   var SELF_AVAILABILITY_RE = /je\s?(suis|serai|reste)(\s?pas)?\s?(toujours\s?|encore\s?)?disponible/i;
+  var BUDGET_CHANGE_VAGUE_RE = /(mon\s?budget\s?a\s?chang|budget\s?differe?nt|autre\s?budget|revoir\s?mon\s?budget|changer\s?(mon\s?)?budget)/i;
+  var OFFTOPIC_AGENCY_RE = /(ouvert(e|s)?\s?(le\s?)?(samedi|dimanche|lundi|mardi|mercredi|jeudi|vendredi)|horaires?\s?d.ouverture|quels?\s?sont\s?vos\s?horaires|vous\s?[êe]tes\s?ou\s?\??|c.?est\s?ou\s?(votre|l.)\s?agence|adresse\s?de\s?l.agence|vous\s?[êe]tes\s?ouvert)/i;
 
   var ACHAT_RE = /(acheter|achat|acqu[ée]rir|je\s?veux\s?acheter|bghit\s?n?chri|nchri)/i;
   var LOCATION_RE = /(lou(er|e)\b|location\b(?!.*mettre)|\bkra\b|kanikri|kankri|bghit\s?n?kri|\bkri\b)/i;
   var VENTE_RE = /(vendre|je\s?vends|je\s?veux\s?vendre|bghit\s?n?bi3|\bnbi3\b|mettre\s?en\s?vente)/i;
-  var MISE_LOC_RE = /(mettre\s?en\s?location|louer\s?mon\s?(appartement|bien|studio|villa))/i;
+  var NEGATED_VENTE_RE = /(pas\s?(du\s?tout\s?)?(de\s?)?vendre|surtout\s?pas\s?vendre|jamais\s?vendre|sans\s?vouloir\s?vendre)/i;
+  var GESTION_LOCATIVE_RE = /(gestion\s?locative|mettre\s?(mon\s?|ma\s?|notre\s?)?(appartement|bien|studio|villa)?\s?en\s?(gestion|location)|confier\s?la\s?gestion|gerer\s?mon\s?(appartement|bien|studio|villa)|louer\s?mon\s?(appartement|bien|studio|villa))/i;
+  var SYNDIC_RE = /(\bsyndic\b|copropriete|charges\s?de\s?copropriete|assemblee\s?generale)/i;
+  var SUPPORT_TECH_RE = /(probleme\s?(avec|sur)\s?(votre|l.|cette|mon)?\s?(application|app\b|site)|app(lication)?\s?(ne\s?marche|plante|bug|fonctionne\s?pas)|\bbug\b|erreur\s?technique|probleme\s?technique|site\s?(ne\s?marche|plante|bug))/i;
+
+  var FUNNEL_INTENTS = { achat:1, location:1 };
+  var HANDOFF_INTENTS = { vente:1, syndic:1, gestion_locative:1, support_technique:1 };
 
   var PROP_MAP = [
     [/appartement|appart\b|appartma/i, "appartement"],
@@ -248,6 +256,11 @@ var KairoxEngine = (function(){
     if(m3) return m3[0] + " DH";
     var m4 = t.match(/\b(\d[.,]\d)\s?(millions?|m)\b/i);
     if(m4) return m4[0].trim();
+    var m5 = t.match(/\b(\d{1,4}(?:[.,]\d+)?)\s?k\b/i);
+    if(m5){
+      var val = Math.round(parseFloat(m5[1].replace(",", ".")) * 1000);
+      return val.toLocaleString("fr-FR") + " DH";
+    }
     return null;
   }
 
@@ -280,6 +293,7 @@ var KairoxEngine = (function(){
     return {
       intent:null, property_type:null, zone:null, budget:null, criteria:null, timeline:null,
       requested_visit:false, human_handoff:false, security_triggered:false, urgent:false,
+      browsing:false, handoff_needed:false, handoff_reason:null,
       turnCount:0, lastQuestion:null
     };
   }
@@ -304,15 +318,35 @@ var KairoxEngine = (function(){
     humanHandoff: ["Bien sûr, je transmets directement votre demande à un conseiller qui va vous recontacter rapidement.", "Pas de souci, je fais suivre votre demande à un conseiller pour un contact direct."],
     browsingAck: ["Aucun souci, prenez votre temps ! Dites-moi simplement quel type de bien et quel secteur vous intéressent, je pourrai déjà vous donner une idée des prix.", "Pas de problème, on n'est pas pressé. Si vous me dites un secteur qui vous plaît, je peux vous donner un ordre d'idée des prix dès maintenant."],
     dispoAnswer: ["Je ne peux pas garantir la disponibilité exacte de ce bien en temps réel — je préfère qu'un conseiller vous le confirme directement plutôt que de vous donner une information qui ne serait plus à jour.", "Pour ne pas vous induire en erreur, je préfère laisser un conseiller vérifier et vous confirmer la disponibilité de ce bien précis."],
+    handoffSyndic: ["Je comprends, ce type de demande concerne plutôt l'équipe copropriété de Serraj — votre dossier est prêt à leur être transmis pour un suivi adapté.", "D'accord, pour une question de syndic je préfère orienter votre demande vers l'équipe copropriété compétente — elle est prête à être transmise."],
+    handoffGestionLocative: ["Très bien, pour la mise en gestion locative de votre bien, votre demande est prête à être transmise à l'équipe dédiée de Serraj.", "Compris, je transmets votre demande de gestion locative à l'équipe Serraj compétente pour qu'un conseiller vous accompagne."],
+    handoffSupportTechnique: ["Désolé pour la gêne — ce type de problème relève du support technique plutôt que de moi, votre demande est prête à leur être transmise.", "D'accord, je transmets ce souci technique à l'équipe support de Serraj, ils pourront vous aider directement."],
+    budgetChangeVague: ["D'accord, quel est votre nouveau budget ?", "Pas de souci, dites-moi votre nouveau budget."],
+    offtopicAgency: ["Pour ça, un conseiller pourra vous confirmer les horaires et coordonnées exactes de l'agence. On peut reprendre où on en était ?", "Je n'ai pas cette info précise sous la main, mais l'équipe vous la donnera avec plaisir. On continue votre recherche ?"],
     securityRefusal: ["Je ne peux pas partager ce type d'information, mais je reste à votre disposition pour vous aider dans votre recherche.", "Je ne suis pas en mesure de communiquer ça, en revanche je peux vous aider sur votre propre projet immobilier."],
     fallback: ["D'accord, bien noté. Vous pouvez me préciser un peu plus votre recherche ?", "Je comprends. Dites-m'en un peu plus sur ce que vous recherchez ?"]
   };
 
-  function detectIntent(normText){
-    if(VENTE_RE.test(normText) || MISE_LOC_RE.test(normText)) return "vente";
+  var HANDOFF_REPLY_KEY = { vente:"ventePath", syndic:"handoffSyndic", gestion_locative:"handoffGestionLocative", support_technique:"handoffSupportTechnique" };
+
+  function detectBusinessIntent(normText){
+    if(SUPPORT_TECH_RE.test(normText)) return "support_technique";
+    if(SYNDIC_RE.test(normText)) return "syndic";
+    if(GESTION_LOCATIVE_RE.test(normText)) return "gestion_locative";
+    if(VENTE_RE.test(normText) && !NEGATED_VENTE_RE.test(normText)) return "vente";
     if(ACHAT_RE.test(normText)) return "achat";
     if(LOCATION_RE.test(normText)) return "location";
     return null;
+  }
+
+  function handoffReasonFor(category, oldIntent){
+    if(category === "vente"){
+      return (oldIntent && oldIntent !== "vente" && FUNNEL_INTENTS[oldIntent]) ? "intent_changed_to_sale" : "sale_request";
+    }
+    if(category === "syndic") return "syndic_request";
+    if(category === "gestion_locative") return "gestion_locative_request";
+    if(category === "support_technique") return "support_technique_request";
+    return "handoff_request";
   }
 
   function respond(rawTextInput, stateInput){
@@ -336,7 +370,10 @@ var KairoxEngine = (function(){
 
       // extraction (always, informational message may accompany a trap question)
       var oldZone = state.zone;
-      var newIntent = detectIntent(normText);
+      var oldBudget = state.budget;
+      var oldIntent = state.intent;
+      var oldFunnelIntent = FUNNEL_INTENTS[oldIntent] ? oldIntent : null;
+      var newIntent = detectBusinessIntent(normText);
       if(newIntent) state.intent = newIntent;
       var pt = extractPropertyType(normText);
       if(pt) state.property_type = pt;
@@ -358,7 +395,8 @@ var KairoxEngine = (function(){
       // don't keep blocking on the intent question — that reads as a broken
       // form, not a conversation. Default softly to "achat" (the most common
       // case for this kind of inquiry) and keep moving. A later explicit
-      // "louer"/"vendre" still overrides this via detectIntent() on the next turn.
+      // "louer"/"vendre"/"vendre"/"syndic"/etc still overrides this via
+      // detectBusinessIntent() on the next turn.
       if(!state.intent && (state.zone || state.budget || state.property_type)){
         state.intent = "achat";
       }
@@ -368,20 +406,56 @@ var KairoxEngine = (function(){
       else if(COMMISSION_RE.test(normText)){ prefix = pick(REPLIES.commissionAnswer) + " "; }
       else if(BEST_RE.test(normText)){ prefix = pick(REPLIES.bestPropertyAnswer) + " "; }
       if(zone && oldZone && zone !== oldZone){ prefix = prefix + "D'accord, on note plutôt " + zone + " alors. "; }
+      if(budget && oldBudget && budget !== oldBudget){ prefix = prefix + "Compris, " + budget + " alors. "; }
+      if(newIntent && oldFunnelIntent && newIntent !== oldFunnelIntent && FUNNEL_INTENTS[newIntent]){
+        prefix = prefix + "D'accord, plutôt " + (newIntent === "achat" ? "un achat" : "une location") + " alors. ";
+      }
 
+      // A specific-property availability question is something this demo
+      // can never answer honestly (no live inventory), so it always routes
+      // to a human instead of guessing yes/no.
       if(DISPO_RE.test(normText) && !SELF_AVAILABILITY_RE.test(normText)){
         state.human_handoff = true;
+        state.handoff_needed = true;
+        state.handoff_reason = "availability_check";
         reply = prefix + pick(REPLIES.dispoAnswer);
         return { reply: reply, state: state };
       }
 
+      // A business-intent switch (real estate search -> sale / syndic /
+      // property management / technical issue) abandons the current
+      // qualification funnel immediately: no more budget/zone/bedrooms
+      // questions, straight to a handoff with everything collected so far
+      // kept in state for the conseiller.
+      if(HANDOFF_INTENTS[state.intent]){
+        state.human_handoff = true;
+        state.handoff_needed = true;
+        state.handoff_reason = handoffReasonFor(state.intent, oldIntent);
+        reply = prefix + pick(REPLIES[HANDOFF_REPLY_KEY[state.intent]]);
+        return { reply: reply, state: state };
+      }
+
       if(state.human_handoff){
+        state.handoff_needed = true;
+        if(!state.handoff_reason) state.handoff_reason = "human_requested";
         reply = prefix + pick(REPLIES.humanHandoff);
         return { reply: reply, state: state };
       }
 
       if(state.requested_visit){
+        state.handoff_needed = true;
+        if(!state.handoff_reason) state.handoff_reason = "visit_request";
         reply = prefix + pick(REPLIES.visiteAck);
+        return { reply: reply, state: state };
+      }
+
+      if(BUDGET_CHANGE_VAGUE_RE.test(normText) && !budget){
+        reply = prefix + pick(REPLIES.budgetChangeVague);
+        return { reply: reply, state: state };
+      }
+
+      if(OFFTOPIC_AGENCY_RE.test(normText)){
+        reply = prefix + pick(REPLIES.offtopicAgency);
         return { reply: reply, state: state };
       }
 
@@ -392,13 +466,6 @@ var KairoxEngine = (function(){
 
       if(!state.intent){
         reply = prefix + (state.turnCount<=1 ? pick(REPLIES.greetingAck) + " " : "") + pick(REPLIES.askIntent);
-        return { reply: reply, state: state };
-      }
-
-      if(state.intent === "vente"){
-        if(!state.zone){ reply = prefix + pick(REPLIES.askZoneVente); return {reply:reply, state:state}; }
-        reply = prefix + pick(REPLIES.ventePath);
-        state.human_handoff = true;
         return { reply: reply, state: state };
       }
 
@@ -426,11 +493,22 @@ var KairoxEngine = (function(){
     if(state.requested_visit) score += 20;
     if(state.human_handoff) score += 10;
     if(score > 100) score = 100;
+    // A decisively-routed non-real-estate handoff (syndic, gestion locative,
+    // support technique, sale) isn't "lukewarm" on a buying-readiness scale —
+    // it's an actioned case that needs a prompt human follow-up, so it's
+    // floored into the "chaud" bucket rather than scored on criteria it will
+    // never have (zone/budget/property_type don't apply to a syndic issue).
+    if(state.handoff_reason === "syndic_request" || state.handoff_reason === "gestion_locative_request" || state.handoff_reason === "support_technique_request" || state.handoff_reason === "sale_request" || state.handoff_reason === "intent_changed_to_sale"){
+      score = Math.max(score, 75);
+    }
     var temperature = score >= 60 ? "chaud" : (score >= 30 ? "tiede" : "froid");
     return { score: score, temperature: temperature };
   }
 
   function nextBestAction(state){
+    if(state.handoff_reason === "syndic_request") return "Conseiller copropriété : rappeler le client pour son dossier syndic.";
+    if(state.handoff_reason === "gestion_locative_request") return "Conseiller gestion locative : rappeler le client pour la mise en gestion de son bien.";
+    if(state.handoff_reason === "support_technique_request") return "Support technique : rappeler le client au sujet de son problème sur l'application.";
     if(state.intent === "vente") return "Conseiller : contacter le propriétaire pour organiser une estimation du bien.";
     if(state.requested_visit) return "Conseiller : confirmer un créneau de visite avec le prospect.";
     if(state.human_handoff) return "Conseiller : rappeler le prospect directement.";
@@ -442,16 +520,25 @@ var KairoxEngine = (function(){
   function summarize(state){
     var parts = [];
     if(state.intent === "vente") parts.push("Propriétaire souhaitant vendre un bien");
+    else if(state.intent === "syndic") parts.push("Client avec une question ou un problème de syndic/copropriété");
+    else if(state.intent === "gestion_locative") parts.push("Propriétaire souhaitant mettre un bien en gestion locative");
+    else if(state.intent === "support_technique") parts.push("Utilisateur rencontrant un problème technique sur l'application");
     else if(state.intent) parts.push("Prospect en recherche de " + state.intent);
-    if(state.property_type) parts.push(state.property_type);
-    if(state.zone) parts.push("secteur " + state.zone);
-    if(state.budget) parts.push("budget " + state.budget);
+    if(state.intent !== "syndic" && state.intent !== "support_technique"){
+      if(state.property_type) parts.push(state.property_type);
+      if(state.zone) parts.push("secteur " + state.zone);
+      if(state.budget) parts.push("budget " + state.budget);
+    }
     if(state.browsing) parts.push("en phase de réflexion, pas encore prêt à s'engager");
+    if(state.handoff_reason === "intent_changed_to_sale") parts.push("a changé d'avis en cours d'échange : recherche initiale abandonnée au profit d'une vente");
     if(!parts.length) return "Prospect en cours de qualification, informations encore limitées.";
     return parts.join(", ") + ".";
   }
 
   function missingFields(state){
+    if(state.intent === "syndic" || state.intent === "support_technique" || state.intent === "gestion_locative"){
+      return [];
+    }
     var missing = [];
     if(!state.intent) missing.push("intention (achat/location/vente)");
     if(state.intent && state.intent !== "vente" && !state.property_type) missing.push("type de bien");
@@ -620,11 +707,13 @@ function revealLead(){
   var sc = KairoxEngine.computeScore(state);
   var statut = "nouveau";
   if(state.intent === "vente") statut = "vendeur";
+  else if(state.intent === "syndic" || state.intent === "gestion_locative" || state.intent === "support_technique") statut = "attente";
   else if(state.requested_visit) statut = "rdv";
   else if(state.human_handoff) statut = "attente";
   else if(state.intent && state.zone && state.budget) statut = "qualifie";
 
-  var typeLabel = state.intent ? (state.intent.charAt(0).toUpperCase() + state.intent.slice(1)) : "À préciser";
+  var INTENT_LABELS = { achat:"Achat", location:"Location", vente:"Vente", syndic:"Syndic / copropriété", gestion_locative:"Gestion locative", support_technique:"Support technique" };
+  var typeLabel = state.intent ? (INTENT_LABELS[state.intent] || (state.intent.charAt(0).toUpperCase() + state.intent.slice(1))) : "À préciser";
 
   var newLead = {
     id: leadIdCounter++,
