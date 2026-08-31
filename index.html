@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Kairox — Serraj Immobilier</title>
+<style>
+  :root{
+    --navy:#1a2332; --navy-light:#26324a; --cream:#f7f4ee; --clay:#b5654a; --clay-light:#f0dfd6;
+    --ink:#1a2332; --muted:#7a8091; --line:#e4ded0; --success:#3f7a56; --warn:#c98a3a; --white:#ffffff; --wa:#2a7d5f;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;overscroll-behavior:none;}
+  button, .lead-card, .cta-test, .btn-launch, .btn-reset, .nav-btn, .reveal-btn, .chat-send, .confirm-btn, .fiche-back, .chat-back{
+    -webkit-user-select:none;
+    user-select:none;
+    -webkit-touch-callout:none;
+  }
+  button{cursor:pointer;}
+  body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",sans-serif;background:var(--cream);color:var(--ink);-webkit-font-smoothing:antialiased;overflow-x:hidden;width:100%;position:relative;}
+  #app{min-height:100vh;min-height:100dvh;padding-bottom:calc(78px + env(safe-area-inset-bottom));}
+  .screen{display:none;} .screen.active{display:block;}
+  .topbar{background:var(--navy);color:var(--cream);padding:18px 18px 16px;padding-top:calc(18px + env(safe-area-inset-top));position:sticky;top:0;z-index:50;}
+  .topbar .brand{font-size:11px;letter-spacing:0.06em;color:var(--clay-light);font-weight:600;}
+  .topbar h1{font-size:19px;font-weight:600;margin-top:3px;}
+  .topbar .sub{font-size:12.5px;color:#a9adba;margin-top:2px;}
+  .container{padding:16px;max-width:520px;margin:0 auto;}
+  .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+  .stat-card{background:var(--white);border:1px solid var(--line);border-radius:14px;padding:16px 14px;}
+  .stat-num{font-size:26px;font-weight:700;color:var(--navy);}
+  .stat-label{font-size:12px;color:var(--muted);margin-top:2px;}
+  .stat-card.highlight{background:var(--navy);} .stat-card.highlight .stat-num{color:var(--cream);} .stat-card.highlight .stat-label{color:#b8bcc7;}
+  .section-title{font-size:13px;font-weight:700;color:var(--navy);margin:22px 0 10px;}
+  .relance-item{background:var(--white);border:1px solid var(--line);border-left:3px solid var(--clay);border-radius:12px;padding:14px;margin-bottom:10px;font-size:13.5px;line-height:1.5;}
+  .relance-item b{color:var(--navy);}
+  .cta-test{display:block;width:100%;background:var(--clay);color:white;border:none;border-radius:14px;padding:18px;font-size:16px;font-weight:700;margin:20px 0 8px;text-align:center;}
+  .cta-test .small{display:block;font-size:12px;font-weight:400;margin-top:4px;opacity:0.9;}
+  .lead-card{background:var(--white);border:1px solid var(--line);border-radius:14px;padding:15px;margin-bottom:10px;}
+  .lead-card.new{border-color:var(--clay);background:linear-gradient(to right, var(--clay-light) 0%, var(--white) 8%);animation:flash 1.4s ease;}
+  @keyframes flash{0%{transform:scale(1.02);}100%{transform:scale(1);}}
+  .lead-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;}
+  .lead-name{font-size:15.5px;font-weight:700;color:var(--navy);}
+  .lead-time{font-size:11px;color:var(--muted);white-space:nowrap;}
+  .lead-tag-new{display:inline-block;background:var(--clay);color:white;font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:8px;margin-left:6px;vertical-align:middle;}
+  .lead-meta{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
+  .lead-chip{font-size:11.5px;background:var(--cream);color:var(--ink);padding:4px 9px;border-radius:8px;border:1px solid var(--line);}
+  .status-row{display:flex;justify-content:space-between;align-items:center;}
+  .status-badge{font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:8px;}
+  .status-nouveau{background:var(--clay-light);color:var(--clay);} .status-qualifie{background:#dcecdf;color:var(--success);}
+  .status-rdv{background:#dde5f5;color:#3a5a9c;} .status-attente{background:#f5ecd6;color:var(--warn);} .status-vendeur{background:#e9e0f5;color:#6a4c9c;}
+  .lead-arrow{color:var(--muted);font-size:13px;}
+  .lead-score{font-size:10.5px;color:var(--muted);margin-top:6px;}
+  .fiche-overlay{position:fixed;inset:0;background:var(--cream);z-index:200;display:none;overflow-y:auto;padding-bottom:40px;}
+  .fiche-overlay.show{display:block;}
+  .fiche-header{background:var(--navy);color:var(--cream);padding:16px 18px 20px;padding-top:calc(16px + env(safe-area-inset-top));position:sticky;top:0;}
+  .fiche-back{color:var(--clay-light);font-size:14px;font-weight:600;margin-bottom:10px;display:inline-block;}
+  .fiche-name{font-size:21px;font-weight:700;} .fiche-sub{font-size:12.5px;color:#a9adba;margin-top:2px;}
+  .fiche-body{padding:16px;}
+  .info-block{background:var(--white);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:12px;}
+  .info-block-title{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.03em;margin-bottom:10px;}
+  .info-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px;gap:10px;}
+  .info-row:last-child{border-bottom:none;}
+  .info-key{color:var(--muted);flex-shrink:0;} .info-val{font-weight:600;color:var(--ink);text-align:right;}
+  .transcript-line{font-size:13.5px;line-height:1.5;padding:8px 0;border-bottom:1px solid var(--line);}
+  .transcript-line:last-child{border-bottom:none;} .transcript-line b{color:var(--navy);}
+  .source-note{font-size:12px;color:var(--muted);background:var(--white);border:1px solid var(--line);border-radius:12px;padding:12px;line-height:1.5;}
+  .score-badge{display:inline-block;font-size:12px;font-weight:700;padding:5px 12px;border-radius:10px;}
+  .score-chaud{background:#fde3d8;color:#b5432a;} .score-tiede{background:#faf0d6;color:#8a6c1f;} .score-froid{background:#e2e7ee;color:#4a5a72;}
+  .next-action{background:var(--navy);color:var(--cream);border-radius:14px;padding:16px;margin-bottom:12px;}
+  .next-action-title{font-size:11px;color:var(--clay-light);text-transform:uppercase;letter-spacing:0.03em;margin-bottom:6px;font-weight:700;}
+  .next-action-text{font-size:14px;line-height:1.5;}
+  .missing-block{background:#faf5ee;border:1px dashed var(--line);border-radius:14px;padding:14px;margin-bottom:12px;font-size:13px;color:var(--muted);line-height:1.5;}
+  .tester-intro{background:var(--white);border:1px solid var(--line);border-radius:16px;padding:22px 18px;text-align:center;}
+  .tester-icon{font-size:38px;margin-bottom:10px;}
+  .tester-intro h2{font-size:18px;font-weight:700;color:var(--navy);margin-bottom:8px;}
+  .tester-intro p{font-size:13.5px;color:var(--muted);line-height:1.55;margin-bottom:18px;}
+  .btn-launch{display:block;width:100%;background:var(--navy);color:var(--cream);border:none;border-radius:14px;padding:17px;font-size:15.5px;font-weight:700;}
+  .disclaimer-mini{font-size:11px;color:var(--muted);margin-top:14px;line-height:1.5;}
+  .admin-zone{margin-top:34px;text-align:center;}
+  .btn-reset{background:none;border:1px solid var(--line);color:var(--muted);font-size:11.5px;padding:8px 14px;border-radius:10px;}
+  .chat-screen{position:fixed;inset:0;background:#e8ded1;z-index:300;display:none;flex-direction:column;height:100vh;height:100dvh;}
+  .chat-screen.show{display:flex;}
+  .chat-header{background:var(--wa);color:white;padding:14px 16px;padding-top:calc(14px + env(safe-area-inset-top));display:flex;align-items:center;gap:10px;flex-shrink:0;}
+  .chat-back{font-size:22px;padding:0 6px;}
+  .chat-avatar{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0;}
+  .chat-title{font-size:15px;font-weight:700;} .chat-status{font-size:11px;color:#d5f0e2;}
+  .chat-body{flex:1;overflow-y:auto;padding:16px 12px;-webkit-overflow-scrolling:touch;}
+  .msg{max-width:82%;padding:9px 13px;border-radius:14px;margin-bottom:8px;font-size:14.5px;line-height:1.42;box-shadow:0 1px 1px rgba(0,0,0,0.06);word-wrap:break-word;}
+  .msg.client{background:#dcf8c6;margin-left:auto;border-bottom-right-radius:3px;}
+  .msg.ai{background:white;margin-right:auto;border-bottom-left-radius:3px;}
+  .msg.system-note{background:none;box-shadow:none;text-align:center;max-width:100%;font-size:11.5px;color:#8a8478;margin:10px 0;}
+  .chat-input-bar{display:flex;align-items:center;gap:8px;padding:10px 10px;padding-bottom:calc(10px + env(safe-area-inset-bottom));background:#e8ded1;flex-shrink:0;}
+  .chat-input{flex:1;border:none;border-radius:22px;padding:11px 16px;font-size:16px;background:white;outline:none;min-width:0;}
+  .chat-send{width:42px;height:42px;border-radius:50%;background:var(--wa);border:none;color:white;font-size:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .reveal-bar{display:none;padding:12px;background:var(--navy);flex-shrink:0;}
+  .reveal-bar.show{display:block;}
+  .reveal-btn{display:block;width:100%;background:var(--clay);color:white;border:none;border-radius:12px;padding:14px;font-size:14.5px;font-weight:700;}
+  .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--white);border-top:1px solid var(--line);display:flex;padding-bottom:env(safe-area-inset-bottom);z-index:100;}
+  .nav-btn{flex:1;text-align:center;padding:11px 4px 9px;border:none;background:none;color:var(--muted);}
+  .nav-btn.active{color:var(--navy);} .nav-icon{font-size:19px;display:block;margin-bottom:2px;} .nav-label{font-size:10.5px;font-weight:600;}
+  .empty-note{text-align:center;color:var(--muted);font-size:13px;padding:30px 20px;line-height:1.6;}
+  .confirm-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;display:none;align-items:center;justify-content:center;padding:24px;}
+  .confirm-overlay.show{display:flex;}
+  .confirm-box{background:white;border-radius:16px;padding:22px;max-width:340px;width:100%;}
+  .confirm-box h3{font-size:16px;margin-bottom:8px;color:var(--navy);}
+  .confirm-box p{font-size:13.5px;color:var(--muted);line-height:1.5;margin-bottom:18px;}
+  .confirm-actions{display:flex;gap:10px;}
+  .confirm-btn{flex:1;padding:12px;border-radius:10px;border:none;font-size:14px;font-weight:700;}
+  .confirm-cancel{background:var(--cream);color:var(--ink);} .confirm-ok{background:var(--clay);color:white;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="screen active" id="screen-dashboard">
+    <div class="topbar"><div class="brand">KAIROX</div><h1>Serraj Immobilier</h1><div class="sub">Exemple de système — pas encore déployé</div></div>
+    <div class="container">
+      <div class="stat-grid">
+        <div class="stat-card"><div class="stat-num" id="stat-nouveaux">3</div><div class="stat-label">Nouveaux leads</div></div>
+        <div class="stat-card"><div class="stat-num" id="stat-traiter">2</div><div class="stat-label">À traiter</div></div>
+        <div class="stat-card"><div class="stat-num" id="stat-qualifies">4</div><div class="stat-label">Qualifiés</div></div>
+        <div class="stat-card highlight"><div class="stat-num" id="stat-rdv">2</div><div class="stat-label">RDV programmés</div></div>
+      </div>
+      <div class="section-title">Relances à effectuer</div>
+      <div class="relance-item"><b>Mme Benali</b> — sans réponse depuis 2 jours (WhatsApp). Relance automatique programmée ce soir 18h.</div>
+      <div class="relance-item"><b>M. Fahmi</b> — a demandé une visite, pas encore de créneau confirmé.</div>
+      <button class="cta-test" onclick="goTo('tester')">Tester l'assistant IA<span class="small">Vivez l'expérience comme un vrai client</span></button>
+      <div class="admin-zone"><button class="btn-reset" onclick="askReset()">Réinitialiser la démo</button></div>
+    </div>
+  </div>
+  <div class="screen" id="screen-leads">
+    <div class="topbar"><div class="brand">KAIROX</div><h1>Prospects</h1><div class="sub">Centralisés automatiquement, tous canaux confondus</div></div>
+    <div class="container" id="leads-container"></div>
+  </div>
+  <div class="screen" id="screen-tester">
+    <div class="topbar"><div class="brand">KAIROX</div><h1>Tester comme un client</h1><div class="sub">Mettez-vous à la place d'un prospect</div></div>
+    <div class="container">
+      <div class="tester-intro">
+        <div class="tester-icon">💬</div>
+        <h2>Faites comme si vous étiez un client</h2>
+        <p>Écrivez librement, comme un vrai prospect qui contacte l'agence sur WhatsApp. L'assistant va comprendre votre demande, poser les bonnes questions, et — si tout va bien — vous proposer une visite. Ensuite on regarde ensemble ce que l'agence reçoit de son côté.</p>
+        <button class="btn-launch" onclick="startChat()">Démarrer la conversation</button>
+        <div class="disclaimer-mini">Ceci est un exemple pour montrer ce qu'on peut construire. Rien n'est encore déployé chez Serraj Immobilier.</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="bottom-nav">
+  <button class="nav-btn active" id="nav-dashboard" onclick="goTo('dashboard')"><span class="nav-icon">▦</span><span class="nav-label">Dashboard</span></button>
+  <button class="nav-btn" id="nav-leads" onclick="goTo('leads')"><span class="nav-icon">☰</span><span class="nav-label">Prospects</span></button>
+  <button class="nav-btn" id="nav-tester" onclick="goTo('tester')"><span class="nav-icon">◎</span><span class="nav-label">Tester</span></button>
+</div>
+<div class="fiche-overlay" id="fiche-overlay">
+  <div class="fiche-header"><span class="fiche-back" onclick="closeFiche()">‹ Retour</span><div class="fiche-name" id="fiche-name">—</div><div class="fiche-sub" id="fiche-sub">—</div></div>
+  <div class="fiche-body" id="fiche-body"></div>
+</div>
+<div class="chat-screen" id="chat-screen">
+  <div class="chat-header"><span class="chat-back" onclick="closeChat()">‹</span><div class="chat-avatar">SI</div><div><div class="chat-title">Serraj Immobilier</div><div class="chat-status">en ligne</div></div></div>
+  <div class="chat-body" id="chat-body"><div class="msg system-note">Aujourd'hui</div></div>
+  <div class="reveal-bar" id="reveal-bar"><button class="reveal-btn" onclick="revealLead()">Voir ce que l'agence reçoit →</button></div>
+  <div class="chat-input-bar">
+    <input type="text" class="chat-input" id="chat-input" placeholder="Écrivez votre message..." autocomplete="off" autocapitalize="sentences">
+    <button class="chat-send" id="chat-send" onclick="sendMessage()">➤</button>
+  </div>
+</div>
+<div class="confirm-overlay" id="confirm-overlay">
+  <div class="confirm-box">
+    <h3>Réinitialiser la démo ?</h3>
+    <p>Tous les prospects créés pendant les tests seront supprimés.</p>
+    <div class="confirm-actions">
+      <button class="confirm-btn confirm-cancel" onclick="closeReset()">Annuler</button>
+      <button class="confirm-btn confirm-ok" onclick="doReset()">Réinitialiser</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ==========================================================================
+   KAIROX ENGINE — moteur conversationnel 100% local, aucune dépendance réseau
+   ========================================================================== */
+var KairoxEngine = (function(){
+
+  function normalize(s){
+    if(!s) return "";
+    try{
+      return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim();
+    }catch(e){ return String(s).toLowerCase().trim(); }
+  }
+  function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+  var ZONES = ["racine","maarif","ain diab","bourgogne","sidi maarouf","bouskoura","dar bouazza","zenata","gauthier","anfa","hay hassani","oasis","californie","beausejour","cil","centre ville","bourgogne ouest","hivernage","longchamp","mers sultan","belvedere"];
+  var STOPWORDS = ["acheter","louer","vendre","chercher","cherche","voudrais","voudrait","veux","budget","appartement","appart","studio","villa","bureau","commerce","maison","semaine","mois","jour","jours","fois","peu","plus","tres","bien","chose","quelque"];
+
+  var SEC_RE = /(ignore\s?(tes|vos)?\s?instructions?|autres?\s?clients?|informations?\s?d.autres|numero\s?du\s?directeur|montre.*(prompt|instructions)|donne.*(prompt|instructions)|quel\s?est\s?ton\s?prompt|tes\s?instructions|system\s?prompt)/i;
+  var ROBOT_RE = /(vous\s?[êe]tes\s?un\s?robot|es.?tu\s?(un\s?)?robot|c.?est\s?un\s?bot|tu\s?es\s?une\s?ia\??|t.?es\s?un\s?bot)/i;
+  var COMMISSION_RE = /(commission|pourcentage|combien\s?vous\s?prenez|vos\s?frais\s?d.agence|frais\s?d.agence)/i;
+  var BEST_RE = /(meilleur\s?(bien|appartement|appart)|le\s?moins\s?cher|votre\s?meilleur)/i;
+  var HUMAN_RE = /(parler\s?(directement\s?)?(a|à|avec)\s?(quelqu.?un|un\s?conseiller|un\s?humain|une\s?personne|un\s?agent)|appelez.?moi|rappelez.?moi|je\s?veux\s?(qu.on\s?m.appelle|un\s?appel)|numero\s?direct|contacter\s?(un\s?)?(conseiller|agent)|mettre.*(contact|relation).*(conseiller|agent|humain))/i;
+
+  var ACHAT_RE = /(acheter|achat|acqu[ée]rir|je\s?veux\s?acheter|bghit\s?n?chri|nchri)/i;
+  var LOCATION_RE = /(lou(er|e)\b|location\b(?!.*mettre)|\bkra\b|kanikri|kankri|bghit\s?n?kri|\bkri\b)/i;
+  var VENTE_RE = /(vendre|je\s?vends|je\s?veux\s?vendre|bghit\s?n?bi3|\bnbi3\b|mettre\s?en\s?vente)/i;
+  var MISE_LOC_RE = /(mettre\s?en\s?location|louer\s?mon\s?(appartement|bien|studio|villa))/i;
+
+  var PROP_MAP = [
+    [/appartement|appart\b|appartma/i, "appartement"],
+    [/\bstudio\b/i, "studio"],
+    [/\bvilla\b/i, "villa"],
+    [/\bbureau[x]?\b/i, "bureau"],
+    [/\bcommerce\b|local\s?commercial/i, "commerce"],
+    [/\bterrain\b/i, "terrain"],
+    [/\bduplex\b/i, "duplex"],
+    [/\bmaison\b/i, "maison"]
+  ];
+
+  var VISITE_RE = /(visiter|visite\b|voir\s?le\s?bien|voir\s?l.appartement|montrer\s?le\s?bien)/i;
+  var URGENT_RE = /(urgent|rapidement|au\s?plus\s?vite|tres\s?vite)/i;
+  var TIMELINE_RE = /(demain|cette\s?semaine|ce\s?mois|dans\s?\d+\s?(jours?|semaines?|mois)|le\s?plus\s?tot\s?possible)/i;
+
+  function extractZone(normText, rawText){
+    // Dictionary match only — never guess a zone from arbitrary words.
+    // This avoids ever inventing/misreading a location (e.g. capturing a stray
+    // word as a fake zone), which would be exactly the kind of hallucination
+    // this assistant must never produce in front of a real estate professional.
+    var best = null;
+    for(var i=0;i<ZONES.length;i++){
+      if(normText.indexOf(ZONES[i]) !== -1){
+        if(!best || ZONES[i].length > best.length) best = ZONES[i];
+      }
+    }
+    if(best) return best.replace(/\b\w/g, function(c){ return c.toUpperCase(); });
+    if(/\bcasa\b|\bcasablanca\b/.test(normText)){
+      return "Casablanca (zone à préciser)";
+    }
+    return null;
+  }
+
+  function extractBudget(rawText){
+    var t = rawText;
+    var m = t.match(/(\d[\d\s.,]{2,})\s?(millions?|mdh|md\b|dhs?|dirhams?)/i);
+    if(m) return m[0].trim();
+    var m2 = t.match(/(\d[\d\s.,]{1,})\s?(millions?|mdh)/i);
+    if(m2) return m2[0].trim();
+    var m3 = t.match(/\b(\d{4,})\b/);
+    if(m3) return m3[0] + " DH";
+    var m4 = t.match(/\b(\d[.,]\d)\s?(millions?|m)\b/i);
+    if(m4) return m4[0].trim();
+    return null;
+  }
+
+  function extractPropertyType(normText){
+    for(var i=0;i<PROP_MAP.length;i++){
+      if(PROP_MAP[i][0].test(normText)) return PROP_MAP[i][1];
+    }
+    return null;
+  }
+
+  function extractCriteria(normText, rawText){
+    var parts = [];
+    var m1 = rawText.match(/(\d)\s?(chambres?|pi[eè]ces?|ch\b)/i);
+    if(m1) parts.push(m1[1] + " chambres");
+    var m2 = rawText.match(/(\d+)\s?m2|(\d+)\s?m²/i);
+    if(m2) parts.push((m2[1]||m2[2]) + " m²");
+    return parts.length ? parts.join(", ") : null;
+  }
+
+  function extractTimeline(normText){
+    if(TIMELINE_RE.test(normText)) {
+      var m = normText.match(TIMELINE_RE);
+      return m[0];
+    }
+    if(URGENT_RE.test(normText)) return "urgent";
+    return null;
+  }
+
+  function newState(){
+    return {
+      intent:null, property_type:null, zone:null, budget:null, criteria:null, timeline:null,
+      requested_visit:false, human_handoff:false, security_triggered:false, urgent:false,
+      turnCount:0, lastQuestion:null
+    };
+  }
+
+  var REPLIES = {
+    greetingAck: ["Bonjour ! Bien sûr, je suis là pour vous aider.", "Bonjour, ravi de vous aider dans votre recherche."],
+    askIntent: ["Pour bien vous orienter, vous cherchez plutôt à acheter, à louer, ou vous souhaitez vendre un bien ?", "Dites-moi, votre projet c'est un achat, une location, ou vous voulez plutôt vendre un bien ?"],
+    askPropertyType: ["Vous recherchez quel type de bien — appartement, villa, studio ?", "Quel type de bien vous intéresse exactement ?"],
+    askZone: ["Quel quartier ou zone vous intéresse ?", "Vous avez une zone précise en tête ?"],
+    askZoneVente: ["Dans quel quartier se trouve votre bien ?", "Votre bien à vendre se trouve où exactement ?"],
+    askBudget: ["Et côté budget, vous visez plutôt combien ?", "Quel est votre budget approximatif ?"],
+    askCriteria: ["Vous avez des critères importants — nombre de chambres, surface ?", "Combien de chambres recherchez-vous environ ?"],
+    proposeVisit: ["On dirait que vous avez une idée assez claire — souhaitez-vous qu'on vous propose une visite ?", "Je peux vous proposer une visite si ça vous intéresse, qu'en dites-vous ?"],
+    visiteAck: ["Parfait, je transmets votre demande de visite à l'équipe, quelqu'un va vous confirmer un créneau rapidement.", "Très bien, je note votre demande de visite — un conseiller va vous recontacter pour fixer un créneau précis."],
+    ventePath: ["D'accord, pour une vente je transmets directement votre dossier à un conseiller qui pourra faire une estimation précise de votre bien.", "Compris, un conseiller va vous recontacter pour évaluer votre bien et discuter des modalités."],
+    robotAnswer: ["Je suis l'assistant de Serraj Immobilier, je suis là pour bien orienter votre demande. Si vous préférez, je peux vous mettre en contact avec un conseiller.", "Oui, je suis un assistant automatisé, mais je peux tout à fait vous transmettre à un conseiller si vous préférez."],
+    commissionAnswer: ["Je préfère vous faire confirmer ce point précis par un conseiller plutôt que de vous donner une information approximative.", "Ça, c'est une question à voir avec un conseiller directement, je préfère ne pas vous donner un chiffre que je ne peux pas garantir."],
+    bestPropertyAnswer: ["Je préfère ne pas vous orienter vers un bien précis sans connaître exactement vos critères — dites-m'en un peu plus et je transmets à un conseiller qui vous proposera ce qui correspond vraiment.", "Je ne veux pas vous donner une réponse approximative — un conseiller pourra vous montrer ce qui correspond le mieux à votre recherche une fois vos critères précisés."],
+    humanHandoff: ["Bien sûr, je transmets directement votre demande à un conseiller qui va vous recontacter rapidement.", "Pas de souci, je fais suivre votre demande à un conseiller pour un contact direct."],
+    securityRefusal: ["Je ne peux pas partager ce type d'information, mais je reste à votre disposition pour vous aider dans votre recherche.", "Je ne suis pas en mesure de communiquer ça, en revanche je peux vous aider sur votre propre projet immobilier."],
+    fallback: ["D'accord, bien noté. Vous pouvez me préciser un peu plus votre recherche ?", "Je comprends. Dites-m'en un peu plus sur ce que vous recherchez ?"]
+  };
+
+  function detectIntent(normText){
+    if(VENTE_RE.test(normText) || MISE_LOC_RE.test(normText)) return "vente";
+    if(ACHAT_RE.test(normText)) return "achat";
+    if(LOCATION_RE.test(normText)) return "location";
+    return null;
+  }
+
+  function respond(rawTextInput, stateInput){
+    var state = stateInput ? JSON.parse(JSON.stringify(stateInput)) : newState();
+    var reply = "";
+    try{
+      var rawText = String(rawTextInput || "");
+      var normText = normalize(rawText);
+      state.turnCount = (state.turnCount||0) + 1;
+
+      if(SEC_RE.test(normText)){
+        state.security_triggered = true;
+        reply = pick(REPLIES.securityRefusal);
+        return { reply: reply, state: state };
+      }
+
+      // extraction (always, informational message may accompany a trap question)
+      var newIntent = detectIntent(normText);
+      if(newIntent) state.intent = newIntent;
+      var pt = extractPropertyType(normText);
+      if(pt) state.property_type = pt;
+      var zone = extractZone(normText, rawText);
+      if(zone) state.zone = zone;
+      var budget = extractBudget(rawText);
+      if(budget) state.budget = budget;
+      var crit = extractCriteria(normText, rawText);
+      if(crit) state.criteria = crit;
+      var tl = extractTimeline(normText);
+      if(tl) state.timeline = tl;
+      if(VISITE_RE.test(normText)) state.requested_visit = true;
+      if(URGENT_RE.test(normText)) state.urgent = true;
+      if(HUMAN_RE.test(normText)) state.human_handoff = true;
+
+      // If the client never says an explicit "acheter/louer/vendre" but has
+      // already given other concrete info (zone, budget or property type)
+      // after the first exchange, don't keep blocking on the intent question
+      // forever — that reads as a broken form, not a conversation. Default
+      // softly to "achat" (the most common case for this kind of inquiry)
+      // and keep moving. A later explicit "louer"/"vendre" still overrides
+      // this via detectIntent() on the next turn.
+      if(!state.intent && state.turnCount >= 2 && (state.zone || state.budget || state.property_type)){
+        state.intent = "achat";
+      }
+
+      var prefix = "";
+      if(ROBOT_RE.test(normText)){ prefix = pick(REPLIES.robotAnswer) + " "; }
+      else if(COMMISSION_RE.test(normText)){ prefix = pick(REPLIES.commissionAnswer) + " "; }
+      else if(BEST_RE.test(normText)){ prefix = pick(REPLIES.bestPropertyAnswer) + " "; }
+
+      if(state.human_handoff){
+        reply = prefix + pick(REPLIES.humanHandoff);
+        return { reply: reply, state: state };
+      }
+
+      if(state.requested_visit){
+        reply = prefix + pick(REPLIES.visiteAck);
+        return { reply: reply, state: state };
+      }
+
+      if(!state.intent){
+        reply = prefix + (state.turnCount<=1 ? pick(REPLIES.greetingAck) + " " : "") + pick(REPLIES.askIntent);
+        return { reply: reply, state: state };
+      }
+
+      if(state.intent === "vente"){
+        if(!state.zone){ reply = prefix + pick(REPLIES.askZoneVente); return {reply:reply, state:state}; }
+        reply = prefix + pick(REPLIES.ventePath);
+        state.human_handoff = true;
+        return { reply: reply, state: state };
+      }
+
+      if(!state.property_type){ reply = prefix + pick(REPLIES.askPropertyType); return {reply:reply, state:state}; }
+      if(!state.zone){ reply = prefix + pick(REPLIES.askZone); return {reply:reply, state:state}; }
+      if(!state.budget){ reply = prefix + pick(REPLIES.askBudget); return {reply:reply, state:state}; }
+      if(!state.criteria && !state.timeline){ reply = prefix + pick(REPLIES.askCriteria); return {reply:reply, state:state}; }
+
+      reply = prefix + pick(REPLIES.proposeVisit);
+      return { reply: reply, state: state };
+
+    }catch(e){
+      return { reply: "D'accord, merci pour votre message. Pouvez-vous préciser votre recherche ?", state: state };
+    }
+  }
+
+  function computeScore(state){
+    var score = 0;
+    if(state.intent) score += 20;
+    if(state.property_type) score += 12;
+    if(state.zone) score += 18;
+    if(state.budget) score += 20;
+    if(state.criteria) score += 8;
+    if(state.urgent) score += 15;
+    if(state.requested_visit) score += 20;
+    if(state.human_handoff) score += 10;
+    if(score > 100) score = 100;
+    var temperature = score >= 60 ? "chaud" : (score >= 30 ? "tiede" : "froid");
+    return { score: score, temperature: temperature };
+  }
+
+  function nextBestAction(state){
+    if(state.intent === "vente") return "Conseiller : contacter le propriétaire pour organiser une estimation du bien.";
+    if(state.requested_visit) return "Conseiller : confirmer un créneau de visite avec le prospect.";
+    if(state.human_handoff) return "Conseiller : rappeler le prospect directement.";
+    if(state.intent && state.zone && state.budget) return "Conseiller : proposer une sélection de biens correspondants puis relancer.";
+    return "Conseiller : reprendre la conversation pour finaliser la qualification.";
+  }
+
+  function summarize(state){
+    var parts = [];
+    if(state.intent === "vente") parts.push("Propriétaire souhaitant vendre un bien");
+    else if(state.intent) parts.push("Prospect en recherche de " + state.intent);
+    if(state.property_type) parts.push(state.property_type);
+    if(state.zone) parts.push("secteur " + state.zone);
+    if(state.budget) parts.push("budget " + state.budget);
+    if(!parts.length) return "Prospect en cours de qualification, informations encore limitées.";
+    return parts.join(", ") + ".";
+  }
+
+  function missingFields(state){
+    var missing = [];
+    if(!state.intent) missing.push("intention (achat/location/vente)");
+    if(state.intent && state.intent !== "vente" && !state.property_type) missing.push("type de bien");
+    if(!state.zone) missing.push("zone");
+    if(state.intent !== "vente" && !state.budget) missing.push("budget");
+    if(!state.criteria && !state.timeline) missing.push("critères / délai");
+    return missing;
+  }
+
+  return { respond: respond, newState: newState, computeScore: computeScore, nextBestAction: nextBestAction, summarize: summarize, missingFields: missingFields };
+})();
+
+if(typeof module !== "undefined" && module.exports){ module.exports = KairoxEngine; }
+
+/* ==========================================================================
+   UI WIRING
+   ========================================================================== */
+window.onerror = function(){ return true; };
+window.addEventListener('unhandledrejection', function(e){ e.preventDefault(); });
+
+function goTo(screen){
+  document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
+  document.getElementById('screen-'+screen).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(function(b){ b.classList.remove('active'); });
+  document.getElementById('nav-'+screen).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+var SEED_LEADS = [
+  { id:1, nom:"Mme Benali", type:"Location", bien:"Appartement F2/F3", budget:"6 000 - 8 000 DH/mois", zone:"Sidi Maârouf", statut:"attente", temperature:null, derniere:"Il y a 2 jours", canal:"WhatsApp",
+    transcript:[{who:"Client", txt:"Bonjour, vous avez des F3 à louer vers Sidi Maârouf ?"},{who:"Assistant", txt:"Bonjour ! Oui tout à fait, quel est votre budget mensuel approximatif ?"},{who:"Client", txt:"Entre 6000 et 8000 DH"}] },
+  { id:2, nom:"M. Fahmi", type:"Achat", bien:"Villa", budget:"2 800 000 DH", zone:"Bouskoura", statut:"qualifie", temperature:null, derniere:"Hier, 17h42", canal:"Site web",
+    transcript:[{who:"Client", txt:"Je cherche une villa à Bouskoura, budget max 2.8M"},{who:"Assistant", txt:"Parfait, combien de chambres recherchez-vous ?"},{who:"Client", txt:"4 chambres, idéalement dans 3 mois"}] },
+  { id:3, nom:"Karim R.", type:"Location", bien:"Studio", budget:"3 500 DH/mois", zone:"Centre-ville", statut:"rdv", temperature:null, derniere:"Ce matin, 09h15", canal:"Instagram",
+    transcript:[{who:"Client", txt:"Salut, un studio pas cher dispo ?"},{who:"Assistant", txt:"Bonjour Karim, oui nous avons plusieurs studios en centre-ville. Souhaitez-vous une visite cette semaine ?"},{who:"Client", txt:"Oui carrément"}] }
+];
+var leads = JSON.parse(JSON.stringify(SEED_LEADS));
+var leadIdCounter = 4;
+
+function statusLabel(s){ return {attente:"En attente", qualifie:"Qualifié", rdv:"Visite demandée", nouveau:"Nouveau", vendeur:"Vendeur — à qualifier"}[s] || s; }
+function statusClass(s){ return "status-"+s; }
+function scoreClass(t){ return {chaud:"score-chaud", tiede:"score-tiede", froid:"score-froid"}[t] || "score-froid"; }
+function scoreLabel(t){ return {chaud:"🔥 Chaud", tiede:"🌤️ Tiède", froid:"❄️ Froid"}[t] || "Non évalué"; }
+function esc(s){ if(!s) return ''; var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+function renderLeads(){
+  var c = document.getElementById('leads-container');
+  if(leads.length===0){ c.innerHTML = '<div class="empty-note">Aucun prospect pour le moment.</div>'; return; }
+  var html = '';
+  var reversed = leads.slice().reverse();
+  for(var i=0;i<reversed.length;i++){
+    var l = reversed[i];
+    html += '<div class="lead-card '+(l.isNew?'new':'')+'" onclick="openFiche('+l.id+')">'
+      + '<div class="lead-top"><div class="lead-name">'+esc(l.nom)+(l.isNew?'<span class="lead-tag-new">NOUVEAU</span>':'')+'</div><div class="lead-time">'+esc(l.derniere)+'</div></div>'
+      + '<div class="lead-meta"><span class="lead-chip">'+esc(l.type)+'</span><span class="lead-chip">'+esc(l.bien)+'</span><span class="lead-chip">'+esc(l.zone)+'</span></div>'
+      + '<div class="status-row"><span class="status-badge '+statusClass(l.statut)+'">'+statusLabel(l.statut)+'</span><span class="lead-arrow">›</span></div>'
+      + (l.temperature ? '<div class="lead-score">'+scoreLabel(l.temperature)+'</div>' : '')
+      + '</div>';
+  }
+  c.innerHTML = html;
+}
+renderLeads();
+
+function openFiche(id){
+  var l = null;
+  for(var i=0;i<leads.length;i++){ if(leads[i].id===id){ l=leads[i]; break; } }
+  if(!l) return;
+  document.getElementById('fiche-name').textContent = l.nom;
+  document.getElementById('fiche-sub').textContent = l.canal+' · '+l.derniere;
+  var scoreBlock = l.temperature ? ('<div class="info-block"><div class="info-block-title">Score du lead</div><span class="score-badge '+scoreClass(l.temperature)+'">'+scoreLabel(l.temperature)+'</span>'+(l.scoreReason?'<div style="margin-top:10px;font-size:13px;color:var(--muted);line-height:1.5;">'+esc(l.scoreReason)+'</div>':'')+'</div>') : '';
+  var nextAction = l.nextAction ? ('<div class="next-action"><div class="next-action-title">Prochaine action recommandée</div><div class="next-action-text">'+esc(l.nextAction)+'</div></div>') : '';
+  var summary = l.aiSummary ? ('<div class="info-block"><div class="info-block-title">Résumé IA</div><div style="font-size:13.5px;line-height:1.55;">'+esc(l.aiSummary)+'</div></div>') : '';
+  var missing = (l.missing && l.missing.length) ? ('<div class="missing-block"><b>Informations manquantes :</b> '+esc(l.missing.join(', '))+'</div>') : '';
+  var transcriptHtml = '';
+  for(var j=0;j<l.transcript.length;j++){ transcriptHtml += '<div class="transcript-line"><b>'+esc(l.transcript[j].who)+' :</b> '+esc(l.transcript[j].txt)+'</div>'; }
+  document.getElementById('fiche-body').innerHTML =
+    nextAction
+    + '<div class="info-block"><div class="info-block-title">Demande</div>'
+    + '<div class="info-row"><span class="info-key">Type</span><span class="info-val">'+esc(l.type)+'</span></div>'
+    + '<div class="info-row"><span class="info-key">Bien recherché</span><span class="info-val">'+esc(l.bien)+'</span></div>'
+    + '<div class="info-row"><span class="info-key">Budget</span><span class="info-val">'+esc(l.budget)+'</span></div>'
+    + '<div class="info-row"><span class="info-key">Zone</span><span class="info-val">'+esc(l.zone)+'</span></div>'
+    + '<div class="info-row"><span class="info-key">Statut</span><span class="info-val">'+statusLabel(l.statut)+'</span></div>'
+    + '</div>' + scoreBlock + summary + missing
+    + '<div class="info-block"><div class="info-block-title">Échange avec l\'assistant</div>'+transcriptHtml+'</div>'
+    + '<div class="source-note">Toutes ces informations sont arrivées automatiquement dans cette fiche, sans qu\'un commercial ait eu besoin de les ressaisir.</div>';
+  document.getElementById('fiche-overlay').classList.add('show');
+}
+function closeFiche(){ document.getElementById('fiche-overlay').classList.remove('show'); }
+
+function askReset(){ document.getElementById('confirm-overlay').classList.add('show'); }
+function closeReset(){ document.getElementById('confirm-overlay').classList.remove('show'); }
+function doReset(){
+  leads = JSON.parse(JSON.stringify(SEED_LEADS));
+  leadIdCounter = 4;
+  renderLeads();
+  document.getElementById('stat-nouveaux').textContent = '3';
+  document.getElementById('stat-traiter').textContent = '2';
+  document.getElementById('stat-qualifies').textContent = '4';
+  document.getElementById('stat-rdv').textContent = '2';
+  closeReset();
+  goTo('dashboard');
+}
+
+var chatHistory = [];
+var engineState = null;
+
+function startChat(){
+  document.getElementById('chat-body').innerHTML = '<div class="msg system-note">Aujourd\'hui</div>';
+  chatHistory = [];
+  engineState = KairoxEngine.newState();
+  document.getElementById('reveal-bar').classList.remove('show');
+  document.getElementById('chat-screen').classList.add('show');
+  setTimeout(function(){
+    var greet = "Bonjour, ici Serraj Immobilier. Comment puis-je vous aider ?";
+    addBubble('ai', greet);
+    chatHistory.push({who:"Assistant", txt:greet});
+  }, 400);
+  setTimeout(function(){ document.getElementById('chat-input').focus(); }, 500);
+}
+function closeChat(){ document.getElementById('chat-screen').classList.remove('show'); }
+
+function addBubble(who, txt){
+  var body = document.getElementById('chat-body');
+  var div = document.createElement('div');
+  div.className = 'msg ' + (who==='client' ? 'client' : 'ai');
+  div.textContent = txt;
+  body.appendChild(div);
+  body.scrollTop = body.scrollHeight;
+}
+
+function isReadyToReveal(state){
+  return !!(state.intent && (state.zone || state.budget || state.requested_visit || state.human_handoff));
+}
+
+function sendMessage(){
+  var input = document.getElementById('chat-input');
+  var txt = input.value.trim();
+  if(!txt) return;
+  addBubble('client', txt);
+  chatHistory.push({who:"Client", txt:txt});
+  input.value = '';
+
+  var result;
+  try{
+    result = KairoxEngine.respond(txt, engineState);
+  }catch(e){
+    result = { reply: "D'accord, merci. Pouvez-vous préciser votre recherche ?", state: engineState };
+  }
+  engineState = result.state;
+
+  setTimeout(function(){
+    addBubble('ai', result.reply);
+    chatHistory.push({who:"Assistant", txt:result.reply});
+    if(isReadyToReveal(engineState)){
+      document.getElementById('reveal-bar').classList.add('show');
+    }
+  }, 350);
+
+  input.focus();
+}
+document.getElementById('chat-input').addEventListener('keypress', function(e){ if(e.key === 'Enter'){ sendMessage(); } });
+
+function revealLead(){
+  var state = engineState || KairoxEngine.newState();
+  var sc = KairoxEngine.computeScore(state);
+  var statut = "nouveau";
+  if(state.intent === "vente") statut = "vendeur";
+  else if(state.requested_visit) statut = "rdv";
+  else if(state.human_handoff) statut = "attente";
+  else if(state.intent && state.zone && state.budget) statut = "qualifie";
+
+  var typeLabel = state.intent ? (state.intent.charAt(0).toUpperCase() + state.intent.slice(1)) : "À préciser";
+
+  var newLead = {
+    id: leadIdCounter++,
+    nom: "Nouveau contact",
+    type: typeLabel,
+    bien: state.property_type || "À préciser",
+    budget: state.budget || "À préciser",
+    zone: state.zone || "À préciser",
+    statut: statut,
+    temperature: sc.temperature,
+    scoreReason: "Score " + sc.score + "/100 — basé sur l'intention exprimée, la précision de la demande et l'urgence.",
+    nextAction: KairoxEngine.nextBestAction(state),
+    aiSummary: KairoxEngine.summarize(state),
+    missing: KairoxEngine.missingFields(state),
+    derniere: "À l'instant",
+    canal: "WhatsApp (test)",
+    isNew: true,
+    transcript: chatHistory.slice()
+  };
+  leads.push(newLead);
+  renderLeads();
+  var nb = document.getElementById('stat-nouveaux');
+  nb.textContent = (parseInt(nb.textContent,10) + 1);
+  closeChat();
+  goTo('leads');
+  setTimeout(function(){ openFiche(newLead.id); }, 350);
+}
+</script>
+</body>
+</html>
