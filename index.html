@@ -281,7 +281,10 @@ var KairoxEngine = (function(){
     };
   }
 
+  var GREETING_ONLY_RE = /^(bonjour|bonsoir|salut|salam|slt|hello|coucou|bjr)[\s!.,]*$/i;
+
   var REPLIES = {
+    greetingOnly: ["Bonjour et bienvenue chez Serraj Immobilier ! Je suis à votre écoute — dites-moi tout sur votre projet.", "Bonjour, ravi de vous accueillir chez Serraj Immobilier. N'hésitez pas à me détailler ce que vous recherchez."],
     greetingAck: ["Bonjour ! Bien sûr, je suis là pour vous aider.", "Bonjour, ravi de vous aider dans votre recherche."],
     askIntent: ["Pour bien vous orienter, vous cherchez plutôt à acheter, à louer, ou vous souhaitez vendre un bien ?", "Dites-moi, votre projet c'est un achat, une location, ou vous voulez plutôt vendre un bien ?"],
     askPropertyType: ["Vous recherchez quel type de bien — appartement, villa, studio ?", "Quel type de bien vous intéresse exactement ?"],
@@ -318,6 +321,11 @@ var KairoxEngine = (function(){
       if(SEC_RE.test(normText)){
         state.security_triggered = true;
         reply = pick(REPLIES.securityRefusal);
+        return { reply: reply, state: state };
+      }
+
+      if(state.turnCount === 1 && GREETING_ONLY_RE.test(normText)){
+        reply = pick(REPLIES.greetingOnly);
         return { reply: reply, state: state };
       }
 
