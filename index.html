@@ -196,6 +196,9 @@ var KairoxEngine = (function(){
   var COMMISSION_RE = /(commission|pourcentage|combien\s?vous\s?prenez|vos\s?frais\s?d.agence|frais\s?d.agence)/i;
   var BEST_RE = /(meilleur\s?(bien|appartement|appart)|le\s?moins\s?cher|votre\s?meilleur)/i;
   var HUMAN_RE = /(parler\s?(directement\s?)?(a|à|avec)\s?(quelqu.?un|un\s?conseiller|un\s?humain|une\s?personne|un\s?agent)|appelez.?moi|rappelez.?moi|je\s?veux\s?(qu.on\s?m.appelle|un\s?appel)|numero\s?direct|contacter\s?(un\s?)?(conseiller|agent)|mettre.*(contact|relation).*(conseiller|agent|humain))/i;
+  var BROWSING_RE = /(je\s?regarde\s?juste|juste\s?regarder|juste\s?curieux|je\s?me\s?renseigne|comparer\s?les\s?prix|pas\s?encore\s?pret|pas\s?presse|pour\s?le\s?moment|sans\s?engagement|je\s?ne\s?suis\s?pas\s?(encore\s?)?(sur|s[uû]r)|on\s?verra)/i;
+  var DISPO_RE = /(toujours\s?disponible|encore\s?disponible|reste.?t.?il|est.?ce\s?(qu.)?(elle|il|ce\s?bien)\s?est\s?(encore\s?|toujours\s?)?disponible|disponible\s?\?|dispo\s?\?|c.?est\s?vendu\s?\?|deja\s?vendu)/i;
+  var SELF_AVAILABILITY_RE = /je\s?(suis|serai|reste)(\s?pas)?\s?(toujours\s?|encore\s?)?disponible/i;
 
   var ACHAT_RE = /(acheter|achat|acqu[ée]rir|je\s?veux\s?acheter|bghit\s?n?chri|nchri)/i;
   var LOCATION_RE = /(lou(er|e)\b|location\b(?!.*mettre)|\bkra\b|kanikri|kankri|bghit\s?n?kri|\bkri\b)/i;
@@ -299,6 +302,8 @@ var KairoxEngine = (function(){
     commissionAnswer: ["Je préfère vous faire confirmer ce point précis par un conseiller plutôt que de vous donner une information approximative.", "Ça, c'est une question à voir avec un conseiller directement, je préfère ne pas vous donner un chiffre que je ne peux pas garantir."],
     bestPropertyAnswer: ["Je préfère ne pas vous orienter vers un bien précis sans connaître exactement vos critères — dites-m'en un peu plus et je transmets à un conseiller qui vous proposera ce qui correspond vraiment.", "Je ne veux pas vous donner une réponse approximative — un conseiller pourra vous montrer ce qui correspond le mieux à votre recherche une fois vos critères précisés."],
     humanHandoff: ["Bien sûr, je transmets directement votre demande à un conseiller qui va vous recontacter rapidement.", "Pas de souci, je fais suivre votre demande à un conseiller pour un contact direct."],
+    browsingAck: ["Aucun souci, prenez votre temps ! Dites-moi simplement quel type de bien et quel secteur vous intéressent, je pourrai déjà vous donner une idée des prix.", "Pas de problème, on n'est pas pressé. Si vous me dites un secteur qui vous plaît, je peux vous donner un ordre d'idée des prix dès maintenant."],
+    dispoAnswer: ["Je ne peux pas garantir la disponibilité exacte de ce bien en temps réel — je préfère qu'un conseiller vous le confirme directement plutôt que de vous donner une information qui ne serait plus à jour.", "Pour ne pas vous induire en erreur, je préfère laisser un conseiller vérifier et vous confirmer la disponibilité de ce bien précis."],
     securityRefusal: ["Je ne peux pas partager ce type d'information, mais je reste à votre disposition pour vous aider dans votre recherche.", "Je ne suis pas en mesure de communiquer ça, en revanche je peux vous aider sur votre propre projet immobilier."],
     fallback: ["D'accord, bien noté. Vous pouvez me préciser un peu plus votre recherche ?", "Je comprends. Dites-m'en un peu plus sur ce que vous recherchez ?"]
   };
@@ -330,6 +335,7 @@ var KairoxEngine = (function(){
       }
 
       // extraction (always, informational message may accompany a trap question)
+      var oldZone = state.zone;
       var newIntent = detectIntent(normText);
       if(newIntent) state.intent = newIntent;
       var pt = extractPropertyType(normText);
@@ -345,15 +351,15 @@ var KairoxEngine = (function(){
       if(VISITE_RE.test(normText)) state.requested_visit = true;
       if(URGENT_RE.test(normText)) state.urgent = true;
       if(HUMAN_RE.test(normText)) state.human_handoff = true;
+      if(BROWSING_RE.test(normText)) state.browsing = true;
 
       // If the client never says an explicit "acheter/louer/vendre" but has
-      // already given other concrete info (zone, budget or property type)
-      // after the first exchange, don't keep blocking on the intent question
-      // forever — that reads as a broken form, not a conversation. Default
-      // softly to "achat" (the most common case for this kind of inquiry)
-      // and keep moving. A later explicit "louer"/"vendre" still overrides
-      // this via detectIntent() on the next turn.
-      if(!state.intent && state.turnCount >= 2 && (state.zone || state.budget || state.property_type)){
+      // already given other concrete info (zone, budget or property type),
+      // don't keep blocking on the intent question — that reads as a broken
+      // form, not a conversation. Default softly to "achat" (the most common
+      // case for this kind of inquiry) and keep moving. A later explicit
+      // "louer"/"vendre" still overrides this via detectIntent() on the next turn.
+      if(!state.intent && (state.zone || state.budget || state.property_type)){
         state.intent = "achat";
       }
 
@@ -361,6 +367,13 @@ var KairoxEngine = (function(){
       if(ROBOT_RE.test(normText)){ prefix = pick(REPLIES.robotAnswer) + " "; }
       else if(COMMISSION_RE.test(normText)){ prefix = pick(REPLIES.commissionAnswer) + " "; }
       else if(BEST_RE.test(normText)){ prefix = pick(REPLIES.bestPropertyAnswer) + " "; }
+      if(zone && oldZone && zone !== oldZone){ prefix = prefix + "D'accord, on note plutôt " + zone + " alors. "; }
+
+      if(DISPO_RE.test(normText) && !SELF_AVAILABILITY_RE.test(normText)){
+        state.human_handoff = true;
+        reply = prefix + pick(REPLIES.dispoAnswer);
+        return { reply: reply, state: state };
+      }
 
       if(state.human_handoff){
         reply = prefix + pick(REPLIES.humanHandoff);
@@ -369,6 +382,11 @@ var KairoxEngine = (function(){
 
       if(state.requested_visit){
         reply = prefix + pick(REPLIES.visiteAck);
+        return { reply: reply, state: state };
+      }
+
+      if(BROWSING_RE.test(normText) && !zone && !budget && !pt){
+        reply = prefix + pick(REPLIES.browsingAck);
         return { reply: reply, state: state };
       }
 
@@ -417,6 +435,7 @@ var KairoxEngine = (function(){
     if(state.requested_visit) return "Conseiller : confirmer un créneau de visite avec le prospect.";
     if(state.human_handoff) return "Conseiller : rappeler le prospect directement.";
     if(state.intent && state.zone && state.budget) return "Conseiller : proposer une sélection de biens correspondants puis relancer.";
+    if(state.browsing) return "Conseiller : laisser le prospect mûrir sa réflexion, prévoir une relance douce dans quelques jours.";
     return "Conseiller : reprendre la conversation pour finaliser la qualification.";
   }
 
@@ -427,6 +446,7 @@ var KairoxEngine = (function(){
     if(state.property_type) parts.push(state.property_type);
     if(state.zone) parts.push("secteur " + state.zone);
     if(state.budget) parts.push("budget " + state.budget);
+    if(state.browsing) parts.push("en phase de réflexion, pas encore prêt à s'engager");
     if(!parts.length) return "Prospect en cours de qualification, informations encore limitées.";
     return parts.join(", ") + ".";
   }
