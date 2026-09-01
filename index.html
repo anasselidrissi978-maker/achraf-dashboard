@@ -280,6 +280,45 @@ var KairoxEngine = (function(){
     return parts.length ? parts.join(", ") : null;
   }
 
+  var NUMBER_WORDS_FR = {un:"1", une:"1", deux:"2", trois:"3", quatre:"4", cinq:"5", six:"6", sept:"7", huit:"8", neuf:"9", dix:"10"};
+
+  // A short reply with nothing but a number ("3") or a spelled-out digit
+  // ("trois") only means "bedroom count" in context — right after the
+  // assistant explicitly asked for it. Without this, a bare answer to
+  // "combien de chambres ?" is silently dropped and the same question
+  // loops forever, which is exactly the kind of broken-form moment this
+  // assistant must never produce in front of a real client.
+  function bareBedroomsReply(rawText, normText){
+    var t = rawText.trim();
+    var m = t.match(/^(\d{1,2})\s*$/);
+    if(m) return m[1] + " chambres";
+    var word = normText.trim().replace(/[.!?]+$/, "");
+    if(NUMBER_WORDS_FR[word]) return NUMBER_WORDS_FR[word] + " chambres";
+    return null;
+  }
+
+  // Same idea for budget: a bare figure typed right after "quel est votre
+  // budget ?" (e.g. "900", "900 000") has no unit to key off of, so the
+  // generic extractBudget() above never catches it. A small bare number is
+  // read as thousands (nobody has a 3 DH budget for a house) — the same
+  // shorthand already accepted for "900k" — and a bare one-decimal number
+  // is read as millions, matching how budgets are written everywhere else
+  // in this flow (e.g. "2.8 millions").
+  function bareBudgetReply(rawText){
+    var t = rawText.trim();
+    var m = t.match(/^(\d[\d\s]*)\s*(dh|dhs|dirhams?)?$/i);
+    if(m){
+      var num = parseInt(m[1].replace(/\s/g, ""), 10);
+      if(!isNaN(num) && num > 0){
+        if(num < 1000) num = num * 1000;
+        return num.toLocaleString("fr-FR") + " DH";
+      }
+    }
+    var m2 = t.match(/^(\d[.,]\d{1,2})\s*(m|mdh)?$/i);
+    if(m2) return m2[1].replace(",", ".") + " millions";
+    return null;
+  }
+
   function extractTimeline(normText){
     if(TIMELINE_RE.test(normText)) {
       var m = normText.match(TIMELINE_RE);
@@ -380,8 +419,10 @@ var KairoxEngine = (function(){
       var zone = extractZone(normText, rawText);
       if(zone) state.zone = zone;
       var budget = extractBudget(rawText);
+      if(!budget && state.lastQuestion === "budget") budget = bareBudgetReply(rawText);
       if(budget) state.budget = budget;
       var crit = extractCriteria(normText, rawText);
+      if(!crit && state.lastQuestion === "criteria") crit = bareBedroomsReply(rawText, normText);
       if(crit) state.criteria = crit;
       var tl = extractTimeline(normText);
       if(tl) state.timeline = tl;
@@ -418,6 +459,7 @@ var KairoxEngine = (function(){
         state.human_handoff = true;
         state.handoff_needed = true;
         state.handoff_reason = "availability_check";
+        state.lastQuestion = null;
         reply = prefix + pick(REPLIES.dispoAnswer);
         return { reply: reply, state: state };
       }
@@ -431,6 +473,7 @@ var KairoxEngine = (function(){
         state.human_handoff = true;
         state.handoff_needed = true;
         state.handoff_reason = handoffReasonFor(state.intent, oldIntent);
+        state.lastQuestion = null;
         reply = prefix + pick(REPLIES[HANDOFF_REPLY_KEY[state.intent]]);
         return { reply: reply, state: state };
       }
@@ -438,6 +481,7 @@ var KairoxEngine = (function(){
       if(state.human_handoff){
         state.handoff_needed = true;
         if(!state.handoff_reason) state.handoff_reason = "human_requested";
+        state.lastQuestion = null;
         reply = prefix + pick(REPLIES.humanHandoff);
         return { reply: reply, state: state };
       }
@@ -445,11 +489,13 @@ var KairoxEngine = (function(){
       if(state.requested_visit){
         state.handoff_needed = true;
         if(!state.handoff_reason) state.handoff_reason = "visit_request";
+        state.lastQuestion = null;
         reply = prefix + pick(REPLIES.visiteAck);
         return { reply: reply, state: state };
       }
 
       if(BUDGET_CHANGE_VAGUE_RE.test(normText) && !budget){
+        state.lastQuestion = "budget";
         reply = prefix + pick(REPLIES.budgetChangeVague);
         return { reply: reply, state: state };
       }
@@ -465,15 +511,17 @@ var KairoxEngine = (function(){
       }
 
       if(!state.intent){
+        state.lastQuestion = "intent";
         reply = prefix + (state.turnCount<=1 ? pick(REPLIES.greetingAck) + " " : "") + pick(REPLIES.askIntent);
         return { reply: reply, state: state };
       }
 
-      if(!state.property_type){ reply = prefix + pick(REPLIES.askPropertyType); return {reply:reply, state:state}; }
-      if(!state.zone){ reply = prefix + pick(REPLIES.askZone); return {reply:reply, state:state}; }
-      if(!state.budget){ reply = prefix + pick(REPLIES.askBudget); return {reply:reply, state:state}; }
-      if(!state.criteria && !state.timeline){ reply = prefix + pick(REPLIES.askCriteria); return {reply:reply, state:state}; }
+      if(!state.property_type){ state.lastQuestion = "property_type"; reply = prefix + pick(REPLIES.askPropertyType); return {reply:reply, state:state}; }
+      if(!state.zone){ state.lastQuestion = "zone"; reply = prefix + pick(REPLIES.askZone); return {reply:reply, state:state}; }
+      if(!state.budget){ state.lastQuestion = "budget"; reply = prefix + pick(REPLIES.askBudget); return {reply:reply, state:state}; }
+      if(!state.criteria && !state.timeline){ state.lastQuestion = "criteria"; reply = prefix + pick(REPLIES.askCriteria); return {reply:reply, state:state}; }
 
+      state.lastQuestion = null;
       reply = prefix + pick(REPLIES.proposeVisit);
       return { reply: reply, state: state };
 
