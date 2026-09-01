@@ -225,6 +225,7 @@ var KairoxEngine = (function(){
   ];
 
   var VISITE_RE = /(visiter|visite\b|voir\s?le\s?bien|voir\s?l.appartement|montrer\s?le\s?bien)/i;
+  var AFFIRMATIVE_RE = /^\s*(oui+|ouais|d.?accord|ok\b|okay|why\s?not|pourquoi\s?pas|avec\s?plaisir|ca\s?marche|volontiers|allons.?y|c.?est\s?parti|je\s?veux\s?bien|parfait|top|banco)/i;
   var URGENT_RE = /(urgent|rapidement|au\s?plus\s?vite|tres\s?vite)/i;
   var TIMELINE_RE = /(demain|cette\s?semaine|ce\s?mois|dans\s?\d+\s?(jours?|semaines?|mois)|le\s?plus\s?tot\s?possible)/i;
 
@@ -427,6 +428,7 @@ var KairoxEngine = (function(){
       var tl = extractTimeline(normText);
       if(tl) state.timeline = tl;
       if(VISITE_RE.test(normText)) state.requested_visit = true;
+      if(!state.requested_visit && state.lastQuestion === "visit_confirm" && AFFIRMATIVE_RE.test(normText)) state.requested_visit = true;
       if(URGENT_RE.test(normText)) state.urgent = true;
       if(HUMAN_RE.test(normText)) state.human_handoff = true;
       if(BROWSING_RE.test(normText)) state.browsing = true;
@@ -521,7 +523,7 @@ var KairoxEngine = (function(){
       if(!state.budget){ state.lastQuestion = "budget"; reply = prefix + pick(REPLIES.askBudget); return {reply:reply, state:state}; }
       if(!state.criteria && !state.timeline){ state.lastQuestion = "criteria"; reply = prefix + pick(REPLIES.askCriteria); return {reply:reply, state:state}; }
 
-      state.lastQuestion = null;
+      state.lastQuestion = "visit_confirm";
       reply = prefix + pick(REPLIES.proposeVisit);
       return { reply: reply, state: state };
 
