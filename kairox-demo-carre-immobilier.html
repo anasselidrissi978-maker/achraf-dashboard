@@ -161,7 +161,7 @@
     <div class="screen active" id="screen-testeur">
       <div class="panel">
         <div class="panel-title">Demande entrante</div>
-        <textarea id="testeur-input" placeholder="Collez ou décrivez ici une demande entrante (formulaire, email, message)…"></textarea>
+        <textarea id="testeur-input" placeholder="Collez ou décrivez ici une demande entrante (formulaire, email, message)…" oninput="invalidateResult()"></textarea>
         <div class="chip-row">
           <button class="chip" onclick="fillExample(0)">Exemple : recherche locative</button>
           <button class="chip" onclick="fillExample(1)">Exemple : cession d'actif</button>
@@ -473,13 +473,26 @@ function loadSeed(){
 }
 loadSeed();
 
+var lastTesteurAnalysis = null;
+var lastTesteurTexte = "";
+
+// The previous analysis result must never stay on screen once the input it
+// was computed from has changed — showing a stale score/pôle next to a
+// different text is exactly the kind of inconsistency a production agent
+// (n8n or otherwise) must never produce. Any edit to the input, whether
+// typed or filled via an example chip, invalidates the displayed result
+// until "Analyser la demande" is pressed again.
+function invalidateResult(){
+  document.getElementById('testeur-result-panel').style.display = 'none';
+  lastTesteurAnalysis = null;
+  lastTesteurTexte = "";
+}
+
 function fillExample(i){
   document.getElementById('testeur-input').value = EXAMPLES[i];
   document.getElementById('testeur-hint').style.display = 'none';
+  invalidateResult();
 }
-
-var lastTesteurAnalysis = null;
-var lastTesteurTexte = "";
 
 function runTesteur(){
   var input = document.getElementById('testeur-input');
