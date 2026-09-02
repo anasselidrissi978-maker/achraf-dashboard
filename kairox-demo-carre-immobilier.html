@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Carré Immobilier — Qualification des demandes</title>
+<style>
+  :root{
+    --ink:#15181f; --ink-soft:#2b303b; --paper:#f3f3f1; --card:#ffffff;
+    --line:#e0e0da; --line-strong:#c9c8c1; --muted:#6d7178;
+    --accent:#73283b; --accent-light:#f2e3e6; --accent-dark:#4f1a28;
+    --good:#2f6d4d; --good-light:#e2eee7;
+    --warn:#a3652b; --warn-light:#f5e7d7;
+    --danger:#9c3b3b; --danger-light:#f5e0e0;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;overscroll-behavior:none;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    background:var(--paper); color:var(--ink); -webkit-font-smoothing:antialiased;
+    overflow-x:hidden; width:100%;
+  }
+  h1,h2,h3,.serif{font-family:Georgia,"Iowan Old Style","Palatino Linotype","Book Antiqua",serif;}
+  button, .tab-btn, .chip, .card-clickable{
+    -webkit-user-select:none; user-select:none; -webkit-touch-callout:none;
+  }
+  button{cursor:pointer;font:inherit;}
+  #app{min-height:100vh;min-height:100dvh;}
+  .topbar{
+    background:var(--ink); color:var(--paper);
+    padding:16px 18px 14px; padding-top:calc(16px + env(safe-area-inset-top));
+    position:sticky; top:0; z-index:60;
+  }
+  .topbar .brand{font-size:10.5px;letter-spacing:0.14em;color:#c9a9b2;font-weight:700;text-transform:uppercase;}
+  .topbar h1{font-size:19px;font-weight:600;margin-top:4px;letter-spacing:0.01em;}
+  .topbar .sub{font-size:11.5px;color:#9a9fab;margin-top:4px;line-height:1.4;}
+  .tabbar{
+    display:flex; background:var(--ink-soft); position:sticky; top:calc(78px + env(safe-area-inset-top)); z-index:55;
+    border-bottom:1px solid #3a4150;
+  }
+  .tab-btn{
+    flex:1; background:none; border:none; color:#a7acb8; font-size:12.5px; font-weight:600;
+    padding:12px 6px; text-align:center; border-bottom:3px solid transparent;
+  }
+  .tab-btn.active{color:#fff; border-bottom-color:var(--accent);}
+  .container{max-width:720px; margin:0 auto; padding:18px 16px 60px;}
+  .screen{display:none;} .screen.active{display:block;}
+
+  .panel{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:18px; margin-bottom:16px;}
+  .panel-title{font-size:12px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:12px;}
+
+  textarea#testeur-input{
+    width:100%; min-height:150px; border:1px solid var(--line-strong); border-radius:12px;
+    padding:14px; font-size:15.5px; font-family:inherit; color:var(--ink); background:#fbfbfa;
+    resize:vertical; line-height:1.5; -webkit-appearance:none;
+  }
+  textarea#testeur-input:focus{outline:2px solid var(--accent); outline-offset:1px;}
+
+  .chip-row{display:flex; flex-wrap:wrap; gap:8px; margin-top:12px;}
+  .chip{
+    background:var(--accent-light); color:var(--accent-dark); border:1px solid #e5c7cd;
+    border-radius:20px; padding:8px 13px; font-size:12.5px; font-weight:600;
+  }
+
+  .btn-primary{
+    display:block; width:100%; background:var(--ink); color:#fff; border:none; border-radius:12px;
+    padding:16px; font-size:15.5px; font-weight:700; margin-top:14px;
+  }
+  .btn-primary:active{background:var(--ink-soft);}
+  .btn-secondary{
+    display:block; width:100%; background:none; color:var(--accent); border:1.5px solid var(--accent);
+    border-radius:12px; padding:13px; font-size:14px; font-weight:700; margin-top:10px;
+  }
+  .hint-msg{font-size:13px; color:var(--muted); background:#f5f4f0; border:1px dashed var(--line-strong); border-radius:10px; padding:12px; margin-top:12px; line-height:1.5;}
+
+  .result-block{margin-top:18px; border-top:1px solid var(--line); padding-top:16px;}
+  .pole-row{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px;}
+  .pole-badge{
+    background:var(--ink); color:#fff; padding:7px 13px; border-radius:9px; font-size:13px; font-weight:700;
+  }
+  .pole-badge.secondary{background:none; color:var(--ink); border:1.5px dashed var(--line-strong); font-weight:600;}
+  .ambig-note{font-size:12.5px; color:var(--muted); margin-bottom:14px; line-height:1.5; font-style:italic;}
+
+  .signal-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px;}
+  .signal-item{background:#f8f7f5; border:1px solid var(--line); border-radius:10px; padding:10px 12px;}
+  .signal-label{font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:3px;}
+  .signal-val{font-size:13.5px; font-weight:600; color:var(--ink);}
+  .signal-val.empty{color:var(--muted); font-weight:400; font-style:italic;}
+
+  .score-block{
+    background:var(--ink); color:#fff; border-radius:12px; padding:16px; margin-bottom:14px;
+  }
+  .score-top{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:8px;}
+  .score-num{font-size:30px; font-weight:700; font-family:Georgia,serif;}
+  .score-tier{font-size:12.5px; font-weight:700; padding:5px 11px; border-radius:8px;}
+  .tier-haute{background:var(--accent);}
+  .tier-standard{background:#4a5262;}
+  .tier-aqualifier{background:#5c616b;}
+  .score-reason{font-size:13px; color:#c9ccd3; line-height:1.55;}
+
+  .routing-block{background:var(--accent-light); border:1px solid #e5c7cd; border-radius:12px; padding:14px;}
+  .routing-label{font-size:10.5px; color:var(--accent-dark); text-transform:uppercase; letter-spacing:0.04em; font-weight:700; margin-bottom:5px;}
+  .routing-val{font-size:14.5px; font-weight:700; color:var(--accent-dark); line-height:1.4;}
+
+  .section-title{font-size:13px; font-weight:700; color:var(--ink); margin:6px 0 12px; text-transform:uppercase; letter-spacing:0.04em;}
+  .toolbar-row{display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;}
+  .btn-reset{background:none; border:1px solid var(--line-strong); color:var(--muted); font-size:11.5px; padding:8px 14px; border-radius:9px; font-weight:600;}
+
+  .dossier-card{
+    background:var(--card); border:1px solid var(--line); border-left:4px solid var(--line-strong);
+    border-radius:12px; padding:14px 15px; margin-bottom:11px;
+  }
+  .dossier-card.tier-haute{border-left-color:var(--accent);}
+  .dossier-card.tier-standard{border-left-color:#7d8595;}
+  .dossier-card.dormant{background:var(--warn-light); border-color:#e6c9a3;}
+  .dossier-top{display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:8px;}
+  .dossier-ref{font-size:11.5px; color:var(--muted); font-weight:600;}
+  .dossier-score{font-size:16px; font-weight:700; color:var(--ink); font-family:Georgia,serif;}
+  .dossier-pole{font-size:12px; font-weight:700; color:var(--ink); margin-bottom:4px;}
+  .dossier-pole .sec{color:var(--muted); font-weight:500;}
+  .dossier-signals{font-size:12.5px; color:var(--muted); line-height:1.5; margin-bottom:8px;}
+  .dossier-bottom{display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;}
+  .dossier-role{font-size:12px; color:var(--accent-dark); font-weight:600;}
+  .dormant-flag{
+    display:inline-flex; align-items:center; gap:5px; background:var(--warn); color:#fff;
+    font-size:11px; font-weight:700; padding:4px 9px; border-radius:7px;
+  }
+  .followup-note{font-size:11.5px; color:var(--muted); margin-top:4px;}
+
+  .pole-card{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:15px; margin-bottom:12px;}
+  .pole-card-top{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px;}
+  .pole-card-name{font-size:14.5px; font-weight:700; color:var(--ink);}
+  .pole-card-count{font-size:13px; color:var(--muted); font-weight:600;}
+  .pole-bar-track{background:#eeede9; border-radius:6px; height:9px; overflow:hidden; margin-bottom:9px;}
+  .pole-bar-fill{background:var(--accent); height:100%; border-radius:6px;}
+  .pole-card-list{font-size:12px; color:var(--muted); line-height:1.6;}
+  .pole-card-sec{font-size:11.5px; color:var(--muted); font-style:italic; margin-top:6px;}
+
+  .empty-note{text-align:center; color:var(--muted); font-size:13px; padding:26px 20px; line-height:1.6;}
+  .footer-note{font-size:11px; color:var(--muted); text-align:center; margin-top:20px; line-height:1.6; padding:0 10px;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="topbar">
+    <div class="brand">CARRÉ IMMOBILIER</div>
+    <h1>Qualification des demandes</h1>
+    <div class="sub">Prototype de démonstration — aide à la priorisation, décision et jugement toujours humains.</div>
+  </div>
+  <div class="tabbar">
+    <button class="tab-btn active" id="tab-testeur" onclick="goTo('testeur')">Testeur</button>
+    <button class="tab-btn" id="tab-dashboard" onclick="goTo('dashboard')">Tableau de bord</button>
+    <button class="tab-btn" id="tab-poles" onclick="goTo('poles')">Vue par pôle</button>
+  </div>
+
+  <div class="container">
+
+    <!-- SCREEN 1 : TESTEUR -->
+    <div class="screen active" id="screen-testeur">
+      <div class="panel">
+        <div class="panel-title">Demande entrante</div>
+        <textarea id="testeur-input" placeholder="Collez ou décrivez ici une demande entrante (formulaire, email, message)…"></textarea>
+        <div class="chip-row">
+          <button class="chip" onclick="fillExample(0)">Exemple : recherche locative</button>
+          <button class="chip" onclick="fillExample(1)">Exemple : cession d'actif</button>
+          <button class="chip" onclick="fillExample(2)">Exemple : gestion locative</button>
+        </div>
+        <button class="btn-primary" onclick="runTesteur()">Analyser la demande</button>
+        <div id="testeur-hint" class="hint-msg" style="display:none;"></div>
+      </div>
+
+      <div class="panel" id="testeur-result-panel" style="display:none;">
+        <div class="panel-title">Résultat de l'analyse</div>
+        <div class="result-block" id="testeur-result"></div>
+        <button class="btn-secondary" id="btn-add-dossier" onclick="addTesteurToDashboard()">Ajouter au tableau de bord</button>
+      </div>
+    </div>
+
+    <!-- SCREEN 2 : DASHBOARD -->
+    <div class="screen" id="screen-dashboard">
+      <div class="toolbar-row">
+        <div class="section-title" style="margin:0;">Dossiers en cours</div>
+        <button class="btn-reset" onclick="resetData()">Réinitialiser</button>
+      </div>
+      <div id="dashboard-list"></div>
+    </div>
+
+    <!-- SCREEN 3 : POLES -->
+    <div class="screen" id="screen-poles">
+      <div class="section-title">Répartition par pôle</div>
+      <div id="poles-list"></div>
+      <div class="footer-note">Un dossier au signal ambigu est compté dans son pôle principal ; le pôle secondaire est indiqué pour transparence, à confirmer en échange direct.</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ==========================================================================
+   MOTEUR DE QUALIFICATION — 100% local, aucune dépendance réseau
+   ========================================================================== */
+var CarreEngine = (function(){
+
+  function normalize(s){
+    if(!s) return "";
+    try{
+      return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim();
+    }catch(e){ return String(s).toLowerCase().trim(); }
+  }
+
+  var POLES = {
+    conseil: {
+      label: "Conseil & Expertise",
+      role: "Responsable Conseil & Expertise",
+      patterns: [
+        [/strategi.{0,3}immobiliere/,25], [/asset\s?management/,25], [/expertise\s?rics/,25],
+        [/arbitrage\s?patrimo/,25], [/audit\s?patrimo/,20], [/conseil\s?en\s?investissement/,20],
+        [/due\s?diligence/,20], [/expertise\s?immobiliere/,18], [/valorisation/,12],
+        [/etude\s?de\s?valorisation/,18], [/conseil/,6], [/expertise/,6], [/strategi/,6],
+        [/patrimo/,6], [/arbitrage/,10]
+      ]
+    },
+    transaction: {
+      label: "Transaction & Commercialisation",
+      role: "Responsable Transaction & Commercialisation",
+      patterns: [
+        [/ceder\s?un\s?actif/,25], [/cession\s?d.?actif/,25], [/cession/,15],
+        [/recherche\s?de\s?locaux/,20], [/recherche\s?d.?actif/,18], [/commercialisation/,18],
+        [/mandat\s?de\s?vente/,20], [/recherche\s?de\s?bureaux/,18], [/recherche\s?d.?entrepot/,18],
+        [/acquisition/,12], [/vente/,8], [/achat/,6], [/transaction\s?immobiliere/,15],
+        [/louer|location/,6]
+      ]
+    },
+    gestion: {
+      label: "Gestion Immobilière",
+      role: "Responsable Gestion Immobilière",
+      patterns: [
+        [/gestion\s?locative/,25], [/property\s?management/,25], [/services\s?locataires/,20],
+        [/gestion\s?technique/,18], [/gestion\s?de\s?copropriete/,18], [/gestion\s?d.?immeuble/,15],
+        [/mise\s?en\s?gestion/,20], [/externaliser\s?la\s?gestion/,20], [/gestion/,6],
+        [/locataire/,6], [/charges\s?locatives/,10], [/bail/,5]
+      ]
+    },
+    amo: {
+      label: "AMO & Projets",
+      role: "Responsable AMO & Projets",
+      patterns: [
+        [/\bamo\b/,20], [/maitrise\s?d.?ouvrage/,22], [/etudes?\s?techniques?/,18],
+        [/amenagement\s?d.?espace/,18], [/performance\s?energetique/,18], [/rehabilitation/,18],
+        [/renovation\s?energetique/,18], [/fit.?out/,15], [/amenagement\s?de\s?bureaux/,18],
+        [/amenagement/,8], [/travaux/,6], [/renovation/,8], [/suivi\s?de\s?travaux/,15]
+      ]
+    }
+  };
+
+  var PROPERTY_TYPES = [
+    [/entrepot|logistique/, "Entrepôt / logistique"],
+    [/bureaux?/, "Bureaux"],
+    [/local\s?commercial|locaux?\s?commerciaux?/, "Local commercial"],
+    [/immeuble\s?de\s?rapport/, "Immeuble de rapport"],
+    [/portefeuille|patrimoine\s?diversifie/, "Patrimoine diversifié"],
+    [/immeuble/, "Immeuble"],
+    [/terrain/, "Terrain"],
+    [/residentiel/, "Résidentiel"]
+  ];
+
+  var CLIENT_TYPES = [
+    [/family\s?office/, "Family office", 15],
+    [/institutionnel/, "Investisseur institutionnel", 15],
+    [/investisseur/, "Investisseur", 12],
+    [/promoteur/, "Promoteur immobilier", 14],
+    [/entreprise|societe|groupe|\bpme\b/, "Entreprise", 8]
+  ];
+
+  var URGENCY_RE = /rapidement|dans\s?les\s?meilleurs\s?delais|au\s?plus\s?vite|urgent|avant\s?fin\s?d.?annee|avant\s?la\s?fin\s?du\s?mois|sous\s?\d+\s?(semaines?|mois|jours?)|delai\s?court/;
+
+  function toNumber(s){
+    var cleaned = String(s).replace(/\s/g,"").replace(",", ".");
+    var n = parseFloat(cleaned);
+    return isNaN(n) ? 0 : n;
+  }
+
+  function parseMontant(rawText){
+    // Note: the "milliards" shorthand deliberately requires the full word
+    // (never a bare "Md"/"mds" abbreviation) — that abbreviation is a
+    // literal text-prefix of "MDH" (millions de dirhams), so accepting it
+    // here would silently swallow the first two letters of "MDH" inputs
+    // and misread every million-scale amount as 1000x too large.
+    var m = rawText.match(/(\d[\d\s.,]*)\s*milliards?\s*(de\s*)?(dh|dirhams?)?/i);
+    if(m) return { value: toNumber(m[1]) * 1e9, label: m[0].trim() };
+    m = rawText.match(/(\d[\d\s.,]*)\s*(millions?\s*(de\s*)?(dh|dirhams?)?|mdh|m\s?dh)\b/i);
+    if(m) return { value: toNumber(m[1]) * 1e6, label: m[0].trim() };
+    m = rawText.match(/(\d{1,3}(?:[ .]\d{3})+|\d{4,})\s*(dh|dirhams?)\b/i);
+    if(m) return { value: toNumber(m[1]), label: m[0].trim() };
+    return null;
+  }
+
+  function parseSurface(rawText){
+    // No \b after "²": it's not a \w character in JS regex, so a boundary
+    // assertion right after it never matches (no \w/\W transition into the
+    // following space) — this silently dropped every "150 m²"-style input.
+    var m = rawText.match(/(\d[\d\s.,]*)\s*m(?:²|2\b)/i);
+    if(m) return { value: toNumber(m[1]), label: m[0].trim() };
+    return null;
+  }
+
+  function detectPropertyType(normText){
+    for(var i=0;i<PROPERTY_TYPES.length;i++){
+      if(PROPERTY_TYPES[i][0].test(normText)) return PROPERTY_TYPES[i][1];
+    }
+    return null;
+  }
+
+  function detectClientType(normText){
+    for(var i=0;i<CLIENT_TYPES.length;i++){
+      if(CLIENT_TYPES[i][0].test(normText)) return { label: CLIENT_TYPES[i][1], pts: CLIENT_TYPES[i][2] };
+    }
+    return null;
+  }
+
+  function scorePoles(normText){
+    var scores = {};
+    Object.keys(POLES).forEach(function(key){
+      var total = 0;
+      POLES[key].patterns.forEach(function(p){ if(p[0].test(normText)) total += p[1]; });
+      scores[key] = total;
+    });
+    return scores;
+  }
+
+  function topTwoPoles(scores){
+    var keys = Object.keys(scores).sort(function(a,b){ return scores[b]-scores[a]; });
+    return { top: keys[0], topScore: scores[keys[0]], second: keys[1], secondScore: scores[keys[1]] };
+  }
+
+  function analyze(rawTextInput){
+    var rawText = String(rawTextInput || "");
+    var normText = normalize(rawText);
+
+    var poleScores = scorePoles(normText);
+    var ranked = topTwoPoles(poleScores);
+    var determined = ranked.topScore > 0;
+    var ambiguous = determined && ranked.secondScore > 0 && ranked.secondScore >= ranked.topScore * 0.6;
+
+    var montant = parseMontant(rawText);
+    var surface = parseSurface(rawText);
+    var urgence = URGENCY_RE.test(normText);
+    var propertyType = detectPropertyType(normText);
+    var clientType = detectClientType(normText);
+
+    var score = 0;
+    var reasons = [];
+
+    if(montant){
+      var pts = montant.value >= 50e6 ? 40 : montant.value >= 10e6 ? 30 : montant.value >= 1e6 ? 18 : 8;
+      score += pts;
+      reasons.push({ text: "montant estimé " + montant.label, pts: pts });
+    } else if(surface){
+      var spts = surface.value >= 5000 ? 28 : surface.value >= 1000 ? 18 : surface.value >= 200 ? 10 : 4;
+      score += spts;
+      reasons.push({ text: "surface " + surface.label, pts: spts });
+    }
+
+    if(urgence){
+      score += 10;
+      reasons.push({ text: "urgence exprimée", pts: 10 });
+    }
+
+    if(clientType){
+      score += clientType.pts;
+      reasons.push({ text: "profil " + clientType.label.toLowerCase(), pts: clientType.pts });
+    }
+
+    var poleBonus = 0;
+    if(determined){
+      if(ranked.top === "conseil") poleBonus = 10;
+      else if(ranked.top === "transaction" && /cession|ceder\s?un\s?actif/.test(normText)) poleBonus = 10;
+      if(poleBonus){
+        score += poleBonus;
+        reasons.push({ text: "dossier à enjeu stratégique (" + POLES[ranked.top].label + ")", pts: poleBonus });
+      }
+    }
+
+    if(score > 100) score = 100;
+
+    var tier = score >= 65 ? { key: "haute", label: "Priorité haute" }
+             : score >= 35 ? { key: "standard", label: "Priorité standard" }
+             : { key: "aqualifier", label: "À qualifier" };
+
+    var reasonText;
+    if(reasons.length){
+      reasonText = "Score " + score + "/100 — " + reasons.map(function(r){ return r.text + " (+" + r.pts + ")"; }).join(", ") + ".";
+    } else {
+      reasonText = "Score " + score + "/100 — aucun signal de valeur détecté dans le texte, dossier à qualifier davantage.";
+    }
+
+    return {
+      poleTop: determined ? ranked.top : null,
+      poleTopLabel: determined ? POLES[ranked.top].label : "Non déterminé",
+      poleSecond: ambiguous ? ranked.second : null,
+      poleSecondLabel: ambiguous ? POLES[ranked.second].label : null,
+      ambiguous: ambiguous,
+      montant: montant, surface: surface, urgence: urgence,
+      propertyType: propertyType, clientType: clientType,
+      score: score, tier: tier, reasonText: reasonText,
+      role: determined ? POLES[ranked.top].role : "À qualifier en interne",
+      roleSecondary: ambiguous ? POLES[ranked.second].role : null
+    };
+  }
+
+  function isDormant(tierKey, joursDepuisSuivi){
+    var threshold = tierKey === "haute" ? 5 : 10;
+    return joursDepuisSuivi >= threshold;
+  }
+
+  return { analyze: analyze, isDormant: isDormant, POLES: POLES };
+})();
+
+if(typeof module !== "undefined" && module.exports){ module.exports = CarreEngine; }
+
+/* ==========================================================================
+   UI WIRING
+   ========================================================================== */
+window.onerror = function(){ return true; };
+window.addEventListener('unhandledrejection', function(e){ e.preventDefault(); });
+
+function goTo(screen){
+  document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
+  document.getElementById('screen-'+screen).classList.add('active');
+  document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
+  document.getElementById('tab-'+screen).classList.add('active');
+  if(screen === 'dashboard') renderDashboard();
+  if(screen === 'poles') renderPoles();
+  window.scrollTo(0,0);
+}
+
+var EXAMPLES = [
+  "Bonjour, nous sommes une PME de 12 personnes basée à Casablanca et nous cherchons à louer un local commercial d'environ 150 m² dans le quartier Maarif, idéalement avant la fin du mois. Merci de nous recontacter.",
+  "Nous représentons un family office et étudions la cession d'un immeuble de bureaux à Casablanca (environ 4200 m², valorisé autour de 85 MDH). Avant la mise en commercialisation, nous souhaitons un avis stratégique sur l'arbitrage patrimonial le plus pertinent. Notre comité d'investissement se réunit dans les meilleurs délais.",
+  "Nous gérons actuellement en interne un portefeuille de 8 immeubles résidentiels et commerciaux et souhaitons externaliser la gestion locative complète ainsi que les services aux locataires. Merci de nous transmettre une proposition."
+];
+
+var SEED_TEXTS = [
+  { texte: EXAMPLES[0], jours: 2 },
+  { texte: EXAMPLES[1], jours: 9 },
+  { texte: EXAMPLES[2], jours: 3 },
+  { texte: "Notre entreprise prévoit la réhabilitation énergétique de son siège social (environ 3000 m² de bureaux) et recherche une mission d'AMO incluant les études techniques et le suivi de travaux d'aménagement. Budget prévisionnel autour de 12 MDH.", jours: 1 },
+  { texte: "Je suis promoteur immobilier et je recherche un entrepôt logistique d'au moins 8000 m² en périphérie de Casablanca pour un projet d'acquisition rapide, budget indicatif de 35 millions de dirhams.", jours: 5 },
+  { texte: "Bonjour, pouvez-vous m'en dire plus sur vos services de gestion immobilière ? Merci.", jours: 0 }
+];
+
+var dossiers = [];
+var dossierCounter = 1;
+
+function esc(s){ if(!s) return ''; var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+function seedDossier(entry){
+  var a = CarreEngine.analyze(entry.texte);
+  return {
+    id: dossierCounter++,
+    ref: "Dossier n°2026-" + String(dossierCounter-1).padStart(3,'0'),
+    texte: entry.texte,
+    jours: entry.jours,
+    analysis: a
+  };
+}
+
+function loadSeed(){
+  dossierCounter = 1;
+  dossiers = SEED_TEXTS.map(seedDossier);
+}
+loadSeed();
+
+function fillExample(i){
+  document.getElementById('testeur-input').value = EXAMPLES[i];
+  document.getElementById('testeur-hint').style.display = 'none';
+}
+
+var lastTesteurAnalysis = null;
+var lastTesteurTexte = "";
+
+function runTesteur(){
+  var input = document.getElementById('testeur-input');
+  var text = input.value.trim();
+  var hint = document.getElementById('testeur-hint');
+  var resultPanel = document.getElementById('testeur-result-panel');
+
+  if(text.length < 15){
+    hint.style.display = 'block';
+    hint.textContent = "Merci de coller ou décrire la demande (quelques phrases suffisent) avant de lancer l'analyse.";
+    resultPanel.style.display = 'none';
+    return;
+  }
+  hint.style.display = 'none';
+
+  var a = CarreEngine.analyze(text);
+  lastTesteurAnalysis = a;
+  lastTesteurTexte = text;
+
+  document.getElementById('testeur-result').innerHTML = renderAnalysisHTML(a);
+  resultPanel.style.display = 'block';
+  document.getElementById('btn-add-dossier').textContent = 'Ajouter au tableau de bord';
+  document.getElementById('btn-add-dossier').disabled = false;
+}
+
+function renderAnalysisHTML(a){
+  var html = '';
+  html += '<div class="pole-row">';
+  html += '<span class="pole-badge">' + esc(a.poleTopLabel) + '</span>';
+  if(a.ambiguous){
+    html += '<span class="pole-badge secondary">Signal secondaire : ' + esc(a.poleSecondLabel) + '</span>';
+  }
+  html += '</div>';
+  if(a.ambiguous){
+    html += '<div class="ambig-note">Cette demande touche potentiellement deux pôles — à confirmer en échange direct avec le client.</div>';
+  }
+
+  html += '<div class="signal-grid">';
+  html += signalItem('Type de bien', a.propertyType);
+  html += signalItem('Montant estimé', a.montant ? a.montant.label : null);
+  html += signalItem('Surface', a.surface ? a.surface.label : null);
+  html += signalItem('Urgence exprimée', a.urgence ? 'Oui' : null);
+  html += signalItem('Type de client', a.clientType ? a.clientType.label : null);
+  html += '</div>';
+
+  var tierClass = 'tier-' + a.tier.key;
+  html += '<div class="score-block">';
+  html += '<div class="score-top"><span class="score-num">' + a.score + '/100</span><span class="score-tier ' + tierClass + '">' + esc(a.tier.label) + '</span></div>';
+  html += '<div class="score-reason">' + esc(a.reasonText) + '</div>';
+  html += '</div>';
+
+  html += '<div class="routing-block">';
+  html += '<div class="routing-label">Interlocuteur suggéré</div>';
+  html += '<div class="routing-val">' + esc(a.role);
+  if(a.roleSecondary){ html += '<br><span style="font-weight:500;font-size:12.5px;">à échanger si besoin avec le ' + esc(a.roleSecondary) + '</span>'; }
+  html += '</div></div>';
+
+  return html;
+}
+
+function signalItem(label, val){
+  return '<div class="signal-item"><div class="signal-label">' + esc(label) + '</div><div class="signal-val' + (val ? '' : ' empty') + '">' + (val ? esc(val) : 'Non détecté') + '</div></div>';
+}
+
+function addTesteurToDashboard(){
+  if(!lastTesteurAnalysis) return;
+  dossiers.push({
+    id: dossierCounter++,
+    ref: "Dossier n°2026-" + String(dossierCounter-1).padStart(3,'0'),
+    texte: lastTesteurTexte,
+    jours: 0,
+    analysis: lastTesteurAnalysis
+  });
+  document.getElementById('btn-add-dossier').textContent = 'Ajouté ✓';
+  document.getElementById('btn-add-dossier').disabled = true;
+  goTo('dashboard');
+}
+
+function renderDashboard(){
+  var list = document.getElementById('dashboard-list');
+  if(dossiers.length === 0){
+    list.innerHTML = '<div class="empty-note">Aucun dossier pour le moment.</div>';
+    return;
+  }
+  var sorted = dossiers.slice().sort(function(x,y){ return y.analysis.score - x.analysis.score; });
+  var html = '';
+  sorted.forEach(function(d){
+    var a = d.analysis;
+    var dormant = CarreEngine.isDormant(a.tier.key, d.jours);
+    var cardClass = 'dossier-card tier-' + a.tier.key + (dormant ? ' dormant' : '');
+    html += '<div class="' + cardClass + '">';
+    html += '<div class="dossier-top"><span class="dossier-ref">' + esc(d.ref) + '</span><span class="dossier-score">' + a.score + '/100</span></div>';
+    html += '<div class="dossier-pole">' + esc(a.poleTopLabel);
+    if(a.ambiguous){ html += ' <span class="sec">+ ' + esc(a.poleSecondLabel) + '</span>'; }
+    html += '</div>';
+    html += '<div class="dossier-signals">';
+    var bits = [];
+    if(a.propertyType) bits.push(a.propertyType);
+    if(a.montant) bits.push(a.montant.label);
+    else if(a.surface) bits.push(a.surface.label);
+    if(a.clientType) bits.push(a.clientType.label);
+    html += (bits.length ? esc(bits.join(' · ')) : 'Signaux limités — à qualifier davantage');
+    html += '</div>';
+    html += '<div class="dossier-bottom">';
+    html += '<span class="dossier-role">' + esc(a.role) + '</span>';
+    if(dormant){
+      html += '<span class="dormant-flag">⏱ sans suivi depuis ' + d.jours + ' j</span>';
+    }
+    html += '</div>';
+    if(!dormant){
+      html += '<div class="followup-note">Dernier suivi il y a ' + d.jours + ' jour' + (d.jours>1?'s':'') + '.</div>';
+    }
+    html += '</div>';
+  });
+  list.innerHTML = html;
+}
+
+function renderPoles(){
+  var list = document.getElementById('poles-list');
+  var counts = { conseil:0, transaction:0, gestion:0, amo:0 };
+  var secondary = { conseil:[], transaction:[], gestion:[], amo:[] };
+  dossiers.forEach(function(d){
+    var a = d.analysis;
+    if(a.poleTop) counts[a.poleTop]++;
+    if(a.ambiguous && a.poleSecond) secondary[a.poleSecond].push(d.ref);
+  });
+  var max = Math.max(1, counts.conseil, counts.transaction, counts.gestion, counts.amo);
+
+  var order = ['conseil','transaction','gestion','amo'];
+  var html = '';
+  order.forEach(function(key){
+    var pole = CarreEngine.POLES[key];
+    var n = counts[key];
+    var pct = Math.round((n / max) * 100);
+    html += '<div class="pole-card">';
+    html += '<div class="pole-card-top"><span class="pole-card-name">' + esc(pole.label) + '</span><span class="pole-card-count">' + n + ' dossier' + (n>1?'s':'') + '</span></div>';
+    html += '<div class="pole-bar-track"><div class="pole-bar-fill" style="width:' + pct + '%;"></div></div>';
+    var refs = dossiers.filter(function(d){ return d.analysis.poleTop === key; }).map(function(d){ return d.ref; });
+    html += '<div class="pole-card-list">' + (refs.length ? esc(refs.join(', ')) : 'Aucun dossier actuellement.') + '</div>';
+    if(secondary[key].length){
+      html += '<div class="pole-card-sec">Signal secondaire sur : ' + esc(secondary[key].join(', ')) + '</div>';
+    }
+    html += '</div>';
+  });
+  list.innerHTML = html;
+}
+
+function resetData(){
+  loadSeed();
+  renderDashboard();
+}
+</script>
+</body>
+</html>
